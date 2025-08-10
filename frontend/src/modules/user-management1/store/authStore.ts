@@ -49,17 +49,10 @@ export const useAuthStore = create<AuthStore>()(
       register: async (data: RegisterData) => {
         try {
           set({ isLoading: true, error: null });
-          // Call the actual service method
-          const mockResponse = await authService.register(data); // mockResponse name can be changed to apiResponse or similar
-          
-          set({
-            user: mockResponse.user,
-            token: mockResponse.token,
-            isAuthenticated: true,
-            isLoading: false
-          });
-          localStorage.setItem("authToken",mockResponse.token);
-          apiClient.defaults.headers.common['Authorization'] = `Bearer ${mockResponse.token}`;
+          await authService.register(data); 
+          localStorage.setItem("redirect","true");
+          localStorage.setItem("registeredData",JSON.stringify(data));
+    
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Registration failed',
@@ -69,7 +62,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: () => {
-        authService.logout(); // Call service logout to clear token from localStorage
+        authService.logout(); 
         set({
           user: null,
           token: null,

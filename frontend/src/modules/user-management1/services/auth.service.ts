@@ -20,19 +20,11 @@ class AuthService {
     }
   }
   
-  async register(data: RegisterData): Promise<{ user: BaseUserProfile; token: string }> {
+  async register(data: RegisterData): Promise<void> {
     try {
-      // Send a POST request to your backend's /auth/register endpoint
-      // Note: Ensure your backend expects data in this format
-      console.log('Sending registration data:', data);
-      const response = await apiClient.post('/auth/register', data);
-      console.log('Registration response:', response);
-      const { token, user } = response.data;
+      await apiClient.post('/auth/register', data);
       
-      return { user, token };
-
     } catch (error: unknown) {
-      // Re-throw the error message from the backend
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
         console.error('Registration error:', error.response?.data || error);
         // @ts-expect-error: error is narrowed but TS can't infer nested types
@@ -48,13 +40,10 @@ class AuthService {
 
   async updateProfile(profileData: Partial<StudentProfile | FacultyProfile | AdminProfile | HODProfile | GuestProfile>): Promise<BaseUserProfile> {
     try {
-      // Send a PUT request to your backend's /auth/profile endpoint (or similar)
       const response = await apiClient.put('/auth/profile', profileData);
       
-      // Assuming the backend returns the updated user object
       return response.data.user;
     } catch (error: unknown) {
-      // Re-throw the error message from the backend
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
         // @ts-expect-error: error is narrowed but TS can't infer nested types
         throw new Error(error.response?.data?.message || 'Profile update failed. Please try again.');

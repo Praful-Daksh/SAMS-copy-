@@ -45,15 +45,12 @@ const RegisterForm = () => {
     e.preventDefault();
     clearError();
 
-    // Do not send confirmPassword to the backend
+   
     const { confirmPassword, ...submissionData } = formData;
     try {
       await register(submissionData);
-      console.log("Registration successful");
-      navigate("/dashboard");
+      navigate("/register/request-sent");
     } catch (err: any) {
-      // The error state is already managed by the useAuthStore,
-      // so no need to manually set it here.
       console.error("Registration error:", err);
     }
   };

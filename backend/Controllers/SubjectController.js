@@ -221,6 +221,4 @@ module.exports = {
   addSubject,
   assignSubject,
   deleteSubjectAssignment,
-  updateSubject,
-  updateSubjectAssignment,
 };

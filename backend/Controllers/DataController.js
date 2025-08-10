@@ -52,12 +52,6 @@ const getFaculties = async (req, res) => {
     const faculties = await User.find({ role: "FACULTY" })
       .select("-password -__v ")
       .lean();
-    if (faculties.length === 0) {
-      return res.status(404).json({
-        message: "No faculty members found",
-        success: false,
-      });
-    }
     const facultyNames = faculties.map((faculty) => ({
       Id: faculty._id,
       firstName: faculty.firstName,

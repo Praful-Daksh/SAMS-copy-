@@ -44,17 +44,17 @@ SubjectRouter.delete(
   deleteSubjectAssignment
 );
 
-SubjectRouter.put(
-  "/assignments/update/:assignmentId",
-  ensureAuthenticated(["HOD", "ADMIN"]),
-  checkAccess,
-  updateSubjectAssignment
-);
+// SubjectRouter.put(
+//   "/assignments/update/:assignmentId",
+//   ensureAuthenticated(["HOD", "ADMIN"]),
+//   checkAccess,
+//   updateSubjectAssignment
+// );
 
-SubjectRouter.put(
-  "/subjects/update/:subjectId",
-  ensureAuthenticated(["HOD","ADMIN"]),
-  updateSubject
-);
+// SubjectRouter.put(
+//   "/subjects/update/:subjectId",
+//   ensureAuthenticated(["HOD","ADMIN"]),
+//   updateSubject
+// );
 
 module.exports = SubjectRouter;
