@@ -1,22 +1,21 @@
 const Subject = require("../Models/Subject.js");
 const { User } = require("../Models/User.js");
 const AssignedSubject = require("../Models/AssignedSubjects.js");
-const Class = require("../Models/Class.js");
 const departmentAssignment = require("../Models/AssignedDepartments.js");
+const Curriculum = require("../Models/Curriculum.js");
 
 /**
- * function to find all subjects for the given department , year, semester
- * returns subject info (subjectName, subjectCode etc.)
+ * Get all subjects by department, year, semester
+ * (optional: curriculum filter can be added later)
  */
 const getSubjectsbyCriteria = async (req, res) => {
   try {
-    let { department, year, semester, batch } = req.query;
+    let { department, year, semester } = req.query;
 
     const query = {};
     if (semester) query.semester = semester;
     if (department) query.department = department;
     if (year) query.year = year;
-    if (batch) query.batch = batch;
 
     if (req.user.role === "HOD") {
       const assignedDetails = await departmentAssignment
@@ -26,16 +25,18 @@ const getSubjectsbyCriteria = async (req, res) => {
       if (!assignedDetails) {
         return res.status(403).json({
           success: false,
-          message: "You are not allowed to request above your access.",
+          message: "Access denied for unassigned department",
         });
       }
+
       const assignedDepartment = assignedDetails.department;
       const assignedYears = assignedDetails.departmentYears;
       year = Number(year);
+
       if (year && !assignedYears.includes(year)) {
         return res.status(403).json({
           success: false,
-          message: "Unauthorized 'year' access.",
+          message: "Unauthorized year access",
         });
       }
 
@@ -50,7 +51,8 @@ const getSubjectsbyCriteria = async (req, res) => {
         success: true,
       });
     }
-    res.status(200).json({
+
+    return res.status(200).json({
       message: "Subjects fetched successfully",
       subjects,
       success: true,
@@ -65,44 +67,52 @@ const getSubjectsbyCriteria = async (req, res) => {
 };
 
 /**
- * function for adding new Subject
- * gets subject name , code other essential things
- * fetch for existing subject with same details (if)
- * returns a newly created subject
+ * Add a new subject and link to curriculum
  */
 const addSubject = async (req, res) => {
-  let { name, code, department, year, semester } = req.body;
+  const { name, code, department, year, semester, curriculumId } = req.body;
+
+  if (!curriculumId) {
+    return res.status(400).json({
+      message: "Curriculum is required",
+      success: false,
+    });
+  }
+
   try {
-    code = code.toUpperCase();
-    const classInfo = await Class.findOne({ department, year })
-      .sort({ batch: -1 })
-      .select("batch _id")
-      .lean();
-    const batch = classInfo.batch;
-    const existingSubject = await Subject.findOne({ code, batch });
+    const existingSubject = await Subject.findOne({ code });
     if (existingSubject) {
       return res.status(400).json({
-        message: "Subject already exists",
+        message: "Subject with same code already exists",
         success: false,
       });
     }
+
     const newSubject = new Subject({
       name,
       code,
       department,
       year,
       semester,
-      batch,
     });
+
     await newSubject.save();
-    await Class.updateMany(
-      { department, year, batch },
-      {
-        $addToSet: { subjects: { subject: newSubject._id } },
-      }
+
+    // Add subject to curriculum
+    const updatedCurriculum = await Curriculum.findByIdAndUpdate(
+      curriculumId,
+      { $addToSet: { subjects: newSubject._id } },
+      { new: true }
     );
 
-    res.status(201).json({
+    if (!updatedCurriculum) {
+      return res.status(404).json({
+        message: "Curriculum not found",
+        success: false,
+      });
+    }
+
+    return res.status(201).json({
       message: "Subject added successfully",
       subject: newSubject,
       success: true,
@@ -117,53 +127,55 @@ const addSubject = async (req, res) => {
 };
 
 /**
- * function for assigning a subject to a faculty
- * it gets subject Id , facultyId (NOTE- mongoose Id), section.
- * it checks that faculty id and student id is available in database 
-    and then check for existing assignment of subject and the faculty 
- *  returns the newly assigned subjectName and facultyName
+ * Assign a subject to a faculty
  */
 const assignSubject = async (req, res) => {
   const assignedBy = req.user.id;
   const { subjectId, facultyId, section } = req.body;
+
   try {
-    const subject = await Subject.findOne({ _id: subjectId });
+    const subject = await Subject.findById(subjectId);
     if (!subject) {
       return res.status(404).json({
         message: "Subject not found",
         success: false,
       });
     }
-    const faculty = await User.findOne({ _id: facultyId });
+
+    const faculty = await User.findById(facultyId);
     if (!faculty) {
       return res.status(404).json({
-        message: "Teacher not found",
+        message: "Faculty not found",
         success: false,
       });
     }
+
     const existingAssignment = await AssignedSubject.findOne({
-      subject: subject._id,
-      section: section,
+      subject: subjectId,
+      section,
     });
+
     if (existingAssignment) {
       return res.status(400).json({
-        message: "This subject is already assigned to the faculty",
+        message: "This subject is already assigned to a faculty",
         success: false,
       });
     }
+
     const newAssignment = new AssignedSubject({
-      subject: subject._id,
-      faculty: faculty._id,
-      section: section,
+      subject: subjectId,
+      faculty: facultyId,
+      section,
       assignedBy,
     });
 
     await newAssignment.save();
-    res.status(201).json({
+
+    return res.status(201).json({
       message: "Subject assigned successfully",
       assignment: {
         subject: subject.name,
-        faculty: faculty.firstName + " " + faculty.lastName,
+        faculty: `${faculty.firstName} ${faculty.lastName}`,
       },
       success: true,
     });
@@ -177,127 +189,29 @@ const assignSubject = async (req, res) => {
 };
 
 /**
- * function for deleting subject assignment
- * delete a subject assignment if exists
+ * Delete subject assignment by ID
  */
-
 const deleteSubjectAssignment = async (req, res) => {
   const assignmentId = req.query.assignmentId;
+
   try {
     const assignment = await AssignedSubject.findByIdAndDelete(assignmentId);
-    if (assignment) {
-      return res.status(200).json({
-        success: true,
-        message: "Assignment Deleted",
-      });
-    } else {
-      return res.status(404).json({
-        success: false,
-        message: "Assignment Not Found",
-      });
-    }
-  } catch (err) {
-    console.log("Assignment Deletion error", err);
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server occurred",
-    });
-  }
-};
-
-/**
- * function for updating subject details
- * updates subject name, code
- */
-
-const updateSubject = async (req, res) => {
-  const { subjectId } = req.params;
-  let { name, code } = req.body;
-  try {
-    code = code.toUpperCase();
-    const subject = await Subject.findById(subjectId);
-    if (!subject) {
-      return res.status(404).json({
-        message: "Subject not found",
-        success: false,
-      });
-    }
-    const doesExist = await Subject.findOne({ code: code }).lean();
-    if (doesExist && doesExist._id.toString() !== subjectId) {
-      return res.status(400).json({
-        message: "Subject with this code already exists",
-        success: false,
-      });
-    }
-    subject.name = name ;
-    subject.code = code ;
-    await subject.save();
-    res.status(200).json({
-      message: "Subject updated successfully",
-      subject,
-      success: true,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Internal server error",
-      success: false,
-    });
-  }
-};
-
-/**
- * function for updating subject assignment
- * update subject assignment faculty, subject, and section
- */
-const updateSubjectAssignment = async (req, res) => {
-  const { assignmentId } = req.params;
-  const { facultyId, subjectId} = req.body;
-  try {
-    const assignment = await AssignedSubject.findById(assignmentId);
     if (!assignment) {
       return res.status(404).json({
-        message: "Assignment not found",
         success: false,
+        message: "Assignment not found",
       });
     }
 
-    // If updating faculty, check if the new faculty exists
-    if (facultyId && facultyId !== String(assignment.faculty)) {
-      const faculty = await User.findById(facultyId);
-      if (!faculty) {
-        return res.status(404).json({
-          message: "Faculty not found",
-          success: false,
-        });
-      }
-      assignment.faculty = facultyId;
-    }
-
-    // If updating subject, check if the new subject exists
-    if (subjectId && subjectId !== String(assignment.subject)) {
-      const subject = await Subject.findById(subjectId);
-      if (!subject) {
-        return res.status(404).json({
-          message: "Subject not found",
-          success: false,
-        });
-      }
-      assignment.subject = subjectId;
-    }
-
-
-    await assignment.save();
-    res.status(200).json({
-      message: "Assignment updated successfully",
-      assignment,
+    return res.status(200).json({
       success: true,
+      message: "Assignment deleted successfully",
     });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Internal server error",
+  } catch (err) {
+    console.error("Assignment Deletion Error:", err);
+    return res.status(500).json({
       success: false,
+      message: "Internal server error",
     });
   }
 };

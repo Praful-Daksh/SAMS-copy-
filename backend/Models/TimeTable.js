@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+const mongoose = require("mongoose")
 
-const TimeSlot = {
+const timeSlotSchema = new mongoose.Schema({
   day: {
     type: String,
     enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
@@ -15,7 +15,8 @@ const TimeSlot = {
     required: true,
   },
   subject: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Subject",
     required: true,
   },
   faculty: {
@@ -23,7 +24,7 @@ const TimeSlot = {
     ref: "User",
     required: true,
   },
-};
+});
 
 const timeTableSchema = new mongoose.Schema(
   {
@@ -32,7 +33,7 @@ const timeTableSchema = new mongoose.Schema(
       ref: "Class",
       required: true,
     },
-    timeSlots: [TimeSlot],
+    timeSlots: [timeSlotSchema],
   },
   { timestamps: true }
 );

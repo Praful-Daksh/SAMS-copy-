@@ -1,7 +1,12 @@
-const mongoose = require("mongoose");
+const mongoose = require("mongoose")
 
 const attendanceSchema = new mongoose.Schema(
   {
+    class: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Class",
+      required: true,
+    },
     subject: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Subject",
@@ -11,20 +16,12 @@ const attendanceSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-    section: {
-      type: Number,
-      required: true,
-    },
     students: [
       {
-        studentId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true,
-        },
+        studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         status: {
           type: String,
-          enum: ["Present", "Absent"],
+          enum: ["Present", "Absent", "Late", "Excused"],
           required: true,
         },
       },

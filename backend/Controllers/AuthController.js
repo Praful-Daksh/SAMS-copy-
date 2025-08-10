@@ -1,12 +1,7 @@
 const {
   User,
-  Student,
-  Admin,
-  Faculty,
-  HOD,
-  ClassTeacher,
-  Guest,
 } = require("../Models/User");
+const PendingUser = require("../Models/PendingUsers")
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const classInfo = require("../Models/Class");
@@ -20,80 +15,33 @@ const registerUser = async (req, res) => {
   try {
     const { email, password, role, profileData } = req.body;
 
-    const roleModels = {
-      STUDENT: Student,
-      FACULTY: Faculty,
-      ADMIN: Admin,
-      HOD: HOD,
-      GUEST: Guest,
-    };
+    const existingUser = await User.findOne({ email });
+    const existingPending = await PendingUser.findOne({ email });
 
-    const UserModel = roleModels[role];
-    if (!UserModel) {
-      return res
-        .status(400)
-        .json({ message: "Invalid role specified", success: false });
-    }
-    const orConditions = [{ email }];
-    if (profileData.rollNumber)
-      orConditions.push({ rollNumber: profileData.rollNumber });
-    if (profileData.aparId) orConditions.push({ aparId: profileData.aparId });
-    const existingUser = await User.findOne({ $or: orConditions });
-
-    let message = "User already exists with the same email";
-    if (role == "STUDENT")
-      message =
-        "User already exists with the same email or roll number or aparId";
-
-    if (existingUser) {
+    if (existingUser || existingPending) {
       return res.status(400).json({
-        message,
+        message:
+          "A user with this email is already registered or pending approval.",
         success: false,
       });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    let admissionYear;
-    let batch;
-    if (role === "STUDENT") {
-      let lateralEntry;
-      if (profileData.lateralEntry) lateralEntry = profileData.lateralEntry;
-
-      admissionYear = new Date(
-        profileData.admission_academic_year
-      ).getFullYear();
-
-      if (lateralEntry) {
-        admissionYear -= 1;
-      }
-      batch = admissionYear;
-    }
-
-    const userData = {
+    const newPending = new PendingUser({
       email,
       password: hashedPassword,
       role,
-      ...profileData,
-      ...(role === "STUDENT" && { batch }),
-    };
+      profileData,
+    });
 
-    const newUser = new UserModel(userData);
-    await newUser.save();
-    if (role === "STUDENT") {
-      const { department, year, section } = profileData;
-      const classDocument = await classInfo.findOne({
-        department,
-        year,
-        section,
-        batch,
-      });
-      if (classDocument) {
-        classDocument.students.push({ student: newUser._id });
-        await classDocument.save();
-      }
-    }
-    return generateTokenAndLogin(newUser, false, req, res);
+    await newPending.save();
+
+    return res.status(200).json({
+      message: "Registration request submitted. Awaiting admin approval.",
+      success: true,
+    });
+
   } catch (error) {
     console.error(error);
     if (error.code === 11000) {
@@ -112,24 +60,32 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   const { email, password, rememberMe } = req.body;
 
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(400).json({ message: "User not found", success: false });
-  }
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "User not found", success: false });
+    }
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res
+        .status(400)
+        .json({ message: "Invalid Password", success: false });
+    }
+
+    return generateTokenAndLogin(user, rememberMe, req, res);
+  } catch (error) {
+    console.error(error);
     return res
-      .status(400)
-      .json({ message: "Invalid Password", success: false });
+      .status(500)
+      .json({ message: "Internal server error", success: false });
   }
-
-  return generateTokenAndLogin(user, rememberMe, req, res);
 };
 
 /**
- * Login helper function
- * being called in login and Register function
+ * Helper to generate JWT and return response
  */
 const generateTokenAndLogin = async (user, rememberMe, req, res) => {
   try {
@@ -140,10 +96,9 @@ const generateTokenAndLogin = async (user, rememberMe, req, res) => {
         role: user.role,
       },
       process.env.JWT_SECRET,
-      {
-        expiresIn,
-      }
+      { expiresIn }
     );
+
     const userObj = user.toObject();
     delete userObj.password;
     delete userObj.__v;

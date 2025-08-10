@@ -3,8 +3,7 @@ const classInfo = require("../Models/Class.js");
 const { User, HOD } = require("../Models/User.js");
 
 const newAssignment = async (req, res) => {
-  const { hodId, department, years} = req.body;
-
+  const { hodId, department, years } = req.body;
 
   try {
     const hod = await User.findById(hodId).select("-__v -password").lean();
@@ -17,7 +16,7 @@ const newAssignment = async (req, res) => {
 
     const doExist = await classInfo
       .find({ department, year: { $in: years } })
-      .select("_id year")
+      .select("year")
       .lean();
 
     if (doExist.length === 0) {
@@ -26,19 +25,16 @@ const newAssignment = async (req, res) => {
         success: false,
       });
     }
-    const isHodAlreadyAssigned = await departmentAssignment.findOne({hod: hodId});
-    if(isHodAlreadyAssigned){
+
+    const isHodAlreadyAssigned = await departmentAssignment.findOne({ hod: hodId });
+    if (isHodAlreadyAssigned) {
       return res.status(409).json({
         success: false,
-        message : "Hod is already assigned to a department",
-      })
+        message: "HOD is already assigned to a department",
+      });
     }
 
-    const existingAssignments = await departmentAssignment
-      .find({
-        department
-      })
-      .lean();
+    const existingAssignments = await departmentAssignment.find({ department }).lean();
 
     const alreadyAssignedYears = new Set();
     existingAssignments.forEach((assignment) => {
@@ -49,8 +45,7 @@ const newAssignment = async (req, res) => {
 
     if (newYears.length === 0) {
       return res.status(400).json({
-        message:
-          "All requested years are already assigned.",
+        message: "All requested years are already assigned.",
         success: false,
       });
     }
@@ -64,9 +59,7 @@ const newAssignment = async (req, res) => {
     await assignment.save();
 
     return res.status(201).json({
-      message: `Department assigned successfully for years: ${newYears.join(
-        ", "
-      )}`,
+      message: `Department assigned successfully for years: ${newYears.join(", ")}`,
       success: true,
     });
   } catch (err) {
@@ -78,14 +71,13 @@ const newAssignment = async (req, res) => {
   }
 };
 
-// Get all HODs
 const getAllHODs = async (req, res) => {
   try {
     const hods = await HOD.find().select("-__v -password").lean();
     return res.status(200).json({
       message: "HODs fetched successfully",
       success: true,
-      hods: hods,
+      hods,
     });
   } catch (err) {
     console.log(err);
@@ -96,15 +88,9 @@ const getAllHODs = async (req, res) => {
   }
 };
 
-// Get all department assignments
 const getDepartmentAssignments = async (req, res) => {
   try {
     const assignments = await departmentAssignment.aggregate([
-      {
-        $sort: {
-          batch: -1,
-        },
-      },
       {
         $lookup: {
           from: "users",
@@ -121,16 +107,12 @@ const getDepartmentAssignments = async (req, res) => {
       },
       {
         $project: {
-          _id: "$_id",
+          _id: 1,
           years: "$departmentYears",
-          department: "$department",
-          hodName: {
-            $concat: ["$hodInfo.firstName", " ", "$hodInfo.lastName"],
-          },
+          department: 1,
+          hodName: { $concat: ["$hodInfo.firstName", " ", "$hodInfo.lastName"] },
           assignedDate: "$createdAt",
-          batch: "$batch",
           hodEmail: "$hodInfo.email",
-          createdAt: "$createdAt",
         },
       },
     ]);
@@ -138,7 +120,7 @@ const getDepartmentAssignments = async (req, res) => {
     return res.status(200).json({
       message: "Department assignments fetched successfully",
       success: true,
-      assignments: assignments,
+      assignments,
     });
   } catch (err) {
     console.log(err);
@@ -149,20 +131,18 @@ const getDepartmentAssignments = async (req, res) => {
   }
 };
 
-// Get assignments by HOD ID
 const getAssignmentsByHOD = async (req, res) => {
   const { hodId } = req.params;
   try {
     const assignments = await departmentAssignment
       .find({ hod: hodId })
       .populate("hod", "firstName lastName email")
-      .sort({ batch: -1 })
       .lean();
 
     return res.status(200).json({
       message: "HOD assignments fetched successfully",
       success: true,
-      assignments: assignments,
+      assignments,
     });
   } catch (err) {
     console.log(err);
@@ -173,7 +153,6 @@ const getAssignmentsByHOD = async (req, res) => {
   }
 };
 
-// Remove department assignment
 const removeAssignment = async (req, res) => {
   const { assignmentId } = req.params;
   try {
@@ -199,10 +178,9 @@ const removeAssignment = async (req, res) => {
   }
 };
 
-// Update department assignment
 const updateAssignment = async (req, res) => {
   const { assignmentId } = req.params;
-  const { department, year, batch } = req.body;
+  const { department, year } = req.body;
 
   try {
     const assignment = await departmentAssignment.findById(assignmentId);
@@ -212,48 +190,38 @@ const updateAssignment = async (req, res) => {
         success: false,
       });
     }
-    const classExists = await classInfo
-      .findOne({
-        department,
-        year,
-        batch,
-      })
-      .lean();
+
+    const classExists = await classInfo.findOne({ department, year }).lean();
 
     if (!classExists) {
       return res.status(404).json({
-        message: "Requested class (department, year, batch) does not exist",
+        message: "Requested class (department, year) does not exist",
         success: false,
       });
     }
 
-    if (assignment.department === department && assignment.batch === batch) {
-      if (assignment.departmentYears.includes(year)) {
-        return res.status(400).json({
-          message: "This year is already assigned in this assignment",
-          success: false,
-        });
-      }
-    } else {
-      const duplicate = await departmentAssignment.findOne({
-        hod: assignment.hod,
-        department,
-        batch,
-        departmentYears: year,
-        _id: { $ne: assignmentId },
+    if (assignment.department === department && assignment.departmentYears.includes(year)) {
+      return res.status(400).json({
+        message: "This year is already assigned in this assignment",
+        success: false,
       });
-
-      if (duplicate) {
-        return res.status(400).json({
-          message:
-            "A different assignment already exists for this department, year, and batch",
-          success: false,
-        });
-      }
     }
 
+    // Check if another assignment already has this year under the same department
+    const duplicate = await departmentAssignment.findOne({
+      _id: { $ne: assignmentId },
+      department,
+      departmentYears: year,
+    });
+
+    if (duplicate) {
+      return res.status(400).json({
+        message: "A different assignment already exists for this department and year",
+        success: false,
+      });
+    }
+    
     assignment.department = department;
-    assignment.batch = batch;
     assignment.departmentYears.push(year);
     await assignment.save();
 

@@ -1,43 +1,36 @@
-const { ref, required } = require("joi");
-const mongoose = require("mongoose");
-
-const ClassSchema = new mongoose.Schema(
-  {
-    department: {
-      type: String,
-      required: true,
-    },
-    year: {
-      type: Number,
-      required: true,
-    },
-    batch: {
-      type: String,
-      required: true,
-    },
-    section: {
-      type: Number,
-      required: true,
-    },
-    subjects: [
-      {
-        subject: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Subject",
-        },
-      },
-    ],
-    students: [
-      {
-        student: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-        },
-      },
-    ],
+const mongoose = require("mongoose")
+const classSchema = new mongoose.Schema({
+  department: {
+    type: String,
+    required: true,
   },
-  { timestamps: true }
-);
+  year: {
+    type: Number,
+    required: true,
+  },
+  batch: {
+    type: String,
+    required: true,
+  },
+  section: {
+    type: Number,
+    required: true,
+  },
+  semester:{
+    type: Number,
+    required : true,
+  },
+  students: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
+  curriculum: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Curriculum",
+  },
+});
 
-const classInfo = mongoose.model("Class", ClassSchema);
-module.exports = classInfo;
+const Class = mongoose.model("Class", classSchema);
+module.exports = Class;

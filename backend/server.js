@@ -13,11 +13,12 @@ const AttendanceRouter = require("./Routes/attendanceRouter");
 const ClassRouter = require("./Routes/classRouter");
 const DashboardRouter = require("./Routes/dashboardRouter");
 const DepartmentAssignmentRouter = require("./Routes/departmentAssignRouter");
+const AdminRouter = require("./Routes/AdminRouter");
 
 const PORT = process.env.PORT || 5000;
 
 // Log environment for debugging
-console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode`);
+console.log(`Server running in ${process.env.NODE_ENV || "development"} mode`);
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000,
@@ -75,6 +76,7 @@ app.use("/attendance", AttendanceRouter);
 app.use("/class", ClassRouter);
 app.use("/dashboard", DashboardRouter);
 app.use("/department", DepartmentAssignmentRouter);
+app.use("/admin", AdminRouter);
 
 app.listen(PORT, () => {
   console.log(`server started at ${PORT}`);

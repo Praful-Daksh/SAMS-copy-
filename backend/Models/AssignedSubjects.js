@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+const mongoose = require("mongoose")
 
-const assignedSubject = new mongoose.Schema(
+const assignedSubjectSchema = new mongoose.Schema(
   {
     faculty: {
       type: mongoose.Schema.Types.ObjectId,
@@ -25,5 +25,8 @@ const assignedSubject = new mongoose.Schema(
   { timestamps: true }
 );
 
-const AssignedSubject = mongoose.model("AssignedSubject", assignedSubject);
+const AssignedSubject = mongoose.model(
+  "AssignedSubject",
+  assignedSubjectSchema
+);
 module.exports = AssignedSubject;

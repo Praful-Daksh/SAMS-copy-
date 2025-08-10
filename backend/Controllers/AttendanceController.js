@@ -5,12 +5,11 @@ const AssignedSubject = require("../Models/AssignedSubjects.js");
 const Subject = require("../Models/Subject.js");
 
 /**
- * function for getting the attendance of a student in  a specific subject
- * her we first checks that the subjectId and studentID is a valid mongoose objectId
- * then it fetches total Class held for that subject and total Class attended by student
+ * Get a student's attendance for a specific subject using aggregation
  */
 const getAttendancebySubject = async (req, res) => {
   const { studentId, subjectId } = req.query;
+
   if (
     !studentId ||
     !subjectId ||
@@ -19,33 +18,42 @@ const getAttendancebySubject = async (req, res) => {
   ) {
     return res.status(400).json({
       success: false,
-      message: "Invalid data-  studentId or subjectId ",
+      message: "Invalid studentId or subjectId",
     });
   }
-  try {
-    const attendance = await Attendance.find({ subject: subjectId }).select(
-      "-__v"
-    );
 
-    if (!attendance || attendance.length == 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No Attendance Record found for the Subject",
+  try {
+    const result = await Attendance.aggregate([
+      { $match: { subject: new mongoose.Types.ObjectId(subjectId) } },
+      { $unwind: "$students" },
+      {
+        $match: {
+          "students.studentId": new mongoose.Types.ObjectId(studentId),
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalClasses: { $sum: 1 },
+          totalAttended: {
+            $sum: {
+              $cond: [{ $eq: ["$students.status", "Present"] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    if (!result || result.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No attendance records found for this subject",
+        totalClasses: 0,
+        totalAttended: 0,
       });
     }
-    let totalClasses = attendance.length;
-    let totalAttended = 0;
-    attendance.forEach((query) => {
-      if (query.students.length != 0) {
-        query.students.forEach((student) => {
-          if (student.studentId == studentId) {
-            if (student.status.toLowerCase() == "present") {
-              totalAttended++;
-            }
-          }
-        });
-      }
-    });
+
+    const { totalClasses, totalAttended } = result[0];
 
     return res.status(200).json({
       success: true,
@@ -54,22 +62,31 @@ const getAttendancebySubject = async (req, res) => {
       totalAttended,
     });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error Occurred",
+      message: "Internal Server Error",
     });
   }
 };
+
 /**
- * Function for marking Attendance
- * verify if faculty is assigned to the subject that he is trying to mark attendance for
- * verify class exists and verify subject exists
- * then mark attendance for each students in studentsAttendance
+ * Mark attendance for a subject and class
  */
 const markAttendance = async (req, res) => {
   const facultyId = req.user.id;
-  const { department, year, section, subjectId, studentsAttendance } = req.body;
+  const { classId, subjectId, studentsAttendance } = req.body;
+
+  if (
+    !mongoose.Types.ObjectId.isValid(classId) ||
+    !mongoose.Types.ObjectId.isValid(subjectId)
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid classId or subjectId",
+    });
+  }
+
   try {
     const subjectInfo = await Subject.findById(subjectId).lean();
     if (!subjectInfo) {
@@ -78,23 +95,24 @@ const markAttendance = async (req, res) => {
         success: false,
       });
     }
-    const facultyAssignment = await AssignedSubject.findOne({
-      faculty: facultyId,
-      subject: subjectId,
-      section,
-    }).lean();
-    if (!facultyAssignment) {
-      return res.status(403).json({
-        message: "You are not assigned to this subject or section of class.",
-        success: false,
-      });
-    }
-    const classDoc = await ClassInfo.findOne({ department, year, section })
-      .select("batch")
-      .lean();
+
+    const classDoc = await ClassInfo.findById(classId).lean();
     if (!classDoc) {
       return res.status(404).json({
         message: "Invalid Class",
+        success: false,
+      });
+    }
+
+    const facultyAssignment = await AssignedSubject.findOne({
+      faculty: facultyId,
+      subject: subjectId,
+      section: classDoc.section,
+    }).lean();
+
+    if (!facultyAssignment) {
+      return res.status(403).json({
+        message: "You are not assigned to this subject or section.",
         success: false,
       });
     }
@@ -111,11 +129,16 @@ const markAttendance = async (req, res) => {
       });
     }
 
+    const date = new Date(studentsAttendance.date);
+    const start = new Date(date.setHours(0, 0, 0, 0));
+    const end = new Date(date.setHours(23, 59, 59, 999));
+
     const existingAttendance = await Attendance.findOne({
       subject: subjectId,
-      section,
-      date: studentsAttendance.date,
+      class: classId,
+      date: { $gte: start, $lte: end },
     });
+
     if (existingAttendance) {
       return res.status(409).json({
         message: "Attendance already marked for this subject and date",
@@ -125,8 +148,8 @@ const markAttendance = async (req, res) => {
 
     const attendance = new Attendance({
       subject: subjectId,
+      class: classId,
       date: studentsAttendance.date,
-      section: section,
       students: studentsAttendance.students.map((student) => ({
         studentId: student.studentId,
         status: student.status,
@@ -134,50 +157,40 @@ const markAttendance = async (req, res) => {
     });
 
     await attendance.save();
+
     return res.status(201).json({
-      message: "Attendance Marked Successfully",
+      message: "Attendance marked successfully",
       success: true,
     });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return res.status(500).json({
-      message: "Internal Server Occurred while marking Attendance",
+      message: "Internal Server Error while marking attendance",
       success: false,
     });
   }
 };
 
 /**
- * function to get attendance by department, year, section and subject for a specific date
- * it first checks if the faculty is assigned to the subject and section
- * then it fetches the attendance for the given date
- * if attendance is found, it returns the attendance of all students in that class
+ * Get attendance for a subject and class on a specific date
  */
-
 const getAttendanceByDate = async (req, res) => {
-  const { department, year, section, subjectId, date } = req.query;
+  const { classId, subjectId, date } = req.query;
+
   if (
-    !department ||
-    !year ||
-    !section ||
+    !classId ||
     !subjectId ||
     !date ||
-    !mongoose.Types.ObjectId.isValid(subjectId)
+    !mongoose.Types.ObjectId.isValid(subjectId) ||
+    !mongoose.Types.ObjectId.isValid(classId)
   ) {
     return res.status(400).json({
       success: false,
-      message: "Invalid data- department, year, section, subjectId or date",
+      message: "Invalid classId, subjectId, or date",
     });
   }
-  try {
-    const subjectInfo = await Subject.findById(subjectId).lean();
-    if (!subjectInfo) {
-      return res.status(404).json({
-        success: false,
-        message: "Invalid Subject",
-      });
-    }
 
+  try {
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
     const end = new Date(date);
@@ -185,38 +198,44 @@ const getAttendanceByDate = async (req, res) => {
 
     const attendance = await Attendance.findOne({
       subject: subjectId,
-      section: section,
+      class: classId,
       date: { $gte: start, $lte: end },
-    }).populate({
-      path: "students.studentId",
-      select: "firstName lastName rollNumber",
-    }).lean();
+    })
+      .populate({
+        path: "students.studentId",
+        select: "firstName lastName rollNumber",
+      })
+      .lean();
 
-    if (!attendance || attendance.length === 0) {
+    if (!attendance) {
       return res.status(200).json({
         success: false,
-        message: "No Attendance Record found for the Subject on this date",
+        message: "No attendance record found for the subject on this date",
       });
     }
+
     const attendanceData = {
       date: attendance.date,
       students: attendance.students.map((student) => ({
         studentId: student.studentId?._id,
-        name: student.studentId?.firstName + " " + student.studentId?.lastName,
+        name: `${student.studentId?.firstName || ""} ${
+          student.studentId?.lastName || ""
+        }`.trim(),
         rollNumber: student.studentId?.rollNumber,
         status: student.status,
       })),
     };
+
     return res.status(200).json({
       success: true,
       message: "Attendance fetched successfully",
       attendance: attendanceData,
     });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error Occurred",
+      message: "Internal Server Error",
     });
   }
 };

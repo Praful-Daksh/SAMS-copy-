@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+
 const options = {
   discriminatorKey: "role",
   collection: "users",
@@ -19,7 +20,7 @@ const baseUserSchema = new mongoose.Schema(
     role: {
       type: String,
       required: true,
-      enum: ["STUDENT", "FACULTY", "HOD", "CLASS_TEACHER", "GUEST"],
+      enum: ["STUDENT", "FACULTY", "HOD", "CLASS_TEACHER", "GUEST", "ADMIN"],
     },
   },
   options
@@ -28,22 +29,6 @@ const baseUserSchema = new mongoose.Schema(
 const User = mongoose.model("User", baseUserSchema);
 
 const studentSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    required: true,
-  },
-  lastName: {
-    type: String,
-    required: true,
-  },
-  phoneNumber: {
-    type: String,
-    required: true,
-  },
-  rollNumber: {
-    type: String,
-    required: true,
-  },
   aparId: {
     type: String,
     required: true,
@@ -93,86 +78,26 @@ const studentSchema = new mongoose.Schema({
   },
 });
 
-const Student = User.discriminator("STUDENT", studentSchema);
-
 const facultySchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    required: true,
-  },
-  lastName: {
-    type: String,
-    required: true,
-  },
-  phoneNumber: {
-    type: String,
-    required: true,
-  },
+  firstName: String,
+  lastName: String,
+  phoneNumber: String,
+  department: String,
 });
 
-const Faculty = User.discriminator("FACULTY", facultySchema);
-
-const classTeacherSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    required: true,
-  },
-  lastName: {
-    type: String,
-    required: true,
-  },
-  phoneNumber: {
-    type: String,
-    required: true,
-  },
-});
-
-const ClassTeacher = User.discriminator("CLASS_TEACHER", classTeacherSchema);
-
-const hodSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    required: true,
-  },
-  lastName: {
-    type: String,
-    required: true,
-  },
-});
-
-const HOD = User.discriminator("HOD", hodSchema);
-
-const adminSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    required: true,
-  },
-  lastName: {
-    type: String,
-    required: true,
-  },
-});
-
-const Admin = User.discriminator("ADMIN", adminSchema);
-
-const guestSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    required: true,
-  },
-  lastName: {
-    type: String,
-    required: true,
-  },
-});
-
-const Guest = User.discriminator("GUEST", guestSchema);
-
-module.exports = {
-  User,
-  Student,
-  Admin,
-  Faculty,
-  HOD,
-  Guest,
+const commonSchema = {
+  firstName: String,
+  lastName: String,
 };
+
+const Student = User.discriminator("STUDENT", studentSchema);
+const Faculty = User.discriminator("FACULTY", facultySchema);
+const HOD = User.discriminator("HOD", new mongoose.Schema(commonSchema));
+const ClassTeacher = User.discriminator(
+  "CLASS_TEACHER",
+  new mongoose.Schema(commonSchema)
+);
+const Admin = User.discriminator("ADMIN", new mongoose.Schema(commonSchema));
+const Guest = User.discriminator("GUEST", new mongoose.Schema(commonSchema));
+
+module.exports = { User, Student, Faculty, HOD, ClassTeacher, Admin, Guest };
