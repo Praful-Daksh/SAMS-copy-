@@ -3,6 +3,7 @@ const classInfo = require("../Models/Class");
 const TimeTable = require("../Models/TimeTable");
 const departmentAssignment = require("../Models/AssignedDepartments");
 const { default: mongoose } = require("mongoose");
+const PendingUser = require("../Models/PendingUsers");
 
 /**
  * function to get students by the department ,year, semester and section
@@ -17,6 +18,7 @@ const getStudentDataByCriteria = async (req, res) => {
     if (year) query.year = year;
     if (semester) query.semester = semester;
     if (section) query.section = section;
+
 
     const students = await User.find(query)
       .where("role")
