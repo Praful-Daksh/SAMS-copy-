@@ -48,8 +48,7 @@ const RegisterForm = () => {
    
     const { confirmPassword, ...submissionData } = formData;
     try {
-      await register(submissionData);
-      navigate("/register/request-sent");
+      const res = await register(submissionData);
     } catch (err: any) {
       console.error("Registration error:", err);
     }

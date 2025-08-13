@@ -1,17 +1,15 @@
 import apiClient from '@/api';
 import { LoginCredentials, RegisterData,BaseUserProfile, StudentProfile, FacultyProfile, AdminProfile, HODProfile, GuestProfile } from '@/modules/user-management1/types/auth.types';
-
+import { useNavigate } from 'react-router-dom';
+const navigate = useNavigate();
 class AuthService {
+
   async login(credentials: LoginCredentials): Promise<{ user: BaseUserProfile; token: string }> {
     try {
-      // Send a POST request to your backend's /auth/login endpoint
       const response = await apiClient.post('/auth/login', credentials);
-      
       const { token, user } = response.data;
-
       return { user, token };
     } catch (error: unknown) {
-      // Re-throw the error message from the backend
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
         // @ts-expect-error: error is narrowed but TS can't infer nested types
         throw new Error(error.response.data?.message || 'Login failed. Please try again.');
@@ -22,8 +20,10 @@ class AuthService {
   
   async register(data: RegisterData): Promise<void> {
     try {
-      await apiClient.post('/auth/register', data);
-      
+      const res = await apiClient.post('/auth/register', data);
+      if(res.data.success){
+        navigate('/register/request-sent')
+      }
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
         console.error('Registration error:', error.response?.data || error);
@@ -88,10 +88,8 @@ class AuthService {
   }
 
 
-    // Fetches the current user's profile using the stored auth token.
   async getProfile(): Promise<BaseUserProfile> {
     try {
-       // This endpoint should be protected and return the user profile based on the provided token.
       const response = await apiClient.get('/auth/me');
       return response.data.user;
     } catch (error: unknown) {
@@ -105,11 +103,11 @@ class AuthService {
     }
   }
 
-  // Fetch users by role (student, faculty, hod, admin)
+
   async fetchUsersByRole(role: string, data : any): Promise<any[]> {
     let endpoint = ''; 
     if(role == "STUDENT"){
-      const response = await apiClient.get(`/userData/students?year=${data.year}&department=${data.department}&section=${data.section}`);
+      const response = await apiClient.get(`/userData/students?year=${data.year}&department=${data.department}&section=${data.section}&pending=${data.pending}`);
       return response.data.students || [];
     }
     else if (role === 'FACULTY') {
