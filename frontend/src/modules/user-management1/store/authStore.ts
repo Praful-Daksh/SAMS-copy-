@@ -5,7 +5,7 @@ import { authService } from '@/modules/user-management1/services/auth.service';
 import apiClient from '@/api';
 interface AuthStore extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  register: (data: RegisterData) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
   updateProfile: (profileData: Partial<StudentProfile | FacultyProfile | AdminProfile | HODProfile | GuestProfile>) => Promise<void>;
@@ -49,9 +49,10 @@ export const useAuthStore = create<AuthStore>()(
       register: async (data: RegisterData) => {
         try {
           set({ isLoading: true, error: null });
-          await authService.register(data); 
+          const res = await authService.register(data); 
           localStorage.setItem("redirect","true");
           localStorage.setItem("registeredData",JSON.stringify(data));
+          return res;
     
         } catch (error) {
           set({

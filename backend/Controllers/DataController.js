@@ -597,6 +597,54 @@ const getStats = async (req, res) => {
   }
 };
 
+/**
+ * function for getting pending user
+ * return pending user along their registered details.
+ */
+
+const getPendingUsers = async (req, res) => {
+  const { role, department, year } = req.query;
+
+  try {
+    const query = {};
+
+    if (!role) return res.status(404).json({ message: "Role requried" });
+    if (department) query.department = department;
+    if (year) query.year = year;
+
+    if (role == "STUDENT") {
+      const pendingUsers = await PendingUser.find({
+        role,
+        "profileData.department": query.department || "CSE",
+        "profileData.year": query.year ||  "1",
+      })
+        .select("-password")
+        .lean();
+
+      return res.status(200).json({
+        success: true,
+        message: "Pending user fetched successfully",
+        pendingUsers,
+      });
+    }
+
+    const pendingUsers = await PendingUser.find({ role })
+      .select("-password")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      message: "Pending user fetched successfully",
+      pendingUsers,
+    });
+  } catch (err) {
+    console.log("Error while getting pending users: ", err);
+    return res.status(500).json({
+      message: "Service Unavailable at the moment.",
+    });
+  }
+};
+
 module.exports = {
   getStudentDataByCriteria,
   getFaculties,
@@ -605,4 +653,5 @@ module.exports = {
   getAssignedSubjectsAndFaculties,
   mySchedule,
   getStats,
+  getPendingUsers,
 };

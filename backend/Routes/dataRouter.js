@@ -9,6 +9,7 @@ const {
   getAssignedSubjectsAndFaculties,
   mySchedule,
   getStats,
+  getPendingUsers,
 } = require("../Controllers/DataController.js");
 const {
   createTimeTableValidation,
@@ -55,6 +56,12 @@ DataRouter.get(
   "/student/academicDetails",
   ensureAuthenticated(["STUDENT"]),
   getStudentAcademicDetails
+);
+
+DataRouter.get(
+  "/pendingUsers",
+  ensureAuthenticated(["ADMIN"]),
+  getPendingUsers
 );
 
 module.exports = DataRouter;

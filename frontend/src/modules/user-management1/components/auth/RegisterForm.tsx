@@ -45,11 +45,12 @@ const RegisterForm = () => {
     e.preventDefault();
     clearError();
 
-   
     const { confirmPassword, ...submissionData } = formData;
     try {
-      await register(submissionData);
-      navigate("/register/request-sent");
+      const res = await register(submissionData);
+      if (res) {
+        navigate("/register/request-sent");
+      }
     } catch (err: any) {
       console.error("Registration error:", err);
     }
@@ -150,7 +151,9 @@ const RegisterForm = () => {
               <UserPlus className="h-6 w-6 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold dark:text-white">Create Account</CardTitle>
+          <CardTitle className="text-2xl font-bold dark:text-white">
+            Create Account
+          </CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -162,7 +165,9 @@ const RegisterForm = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="dark:text-gray-200">Email Address</Label>
+              <Label htmlFor="email" className="dark:text-gray-200">
+                Email Address
+              </Label>
               <Input
                 id="email"
                 name="email"
@@ -176,7 +181,9 @@ const RegisterForm = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role" className="dark:text-gray-200">Role</Label>
+              <Label htmlFor="role" className="dark:text-gray-200">
+                Role
+              </Label>
               <Select value={formData.role} onValueChange={handleRoleChange}>
                 <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                   <SelectValue placeholder="Select your role" />
@@ -195,7 +202,9 @@ const RegisterForm = () => {
 
             {/* Common fields for all roles */}
             <div className="space-y-2">
-              <Label htmlFor="firstName" className="dark:text-gray-200">First Name</Label>
+              <Label htmlFor="firstName" className="dark:text-gray-200">
+                First Name
+              </Label>
               <Input
                 id="firstName"
                 name="firstName"
@@ -206,7 +215,9 @@ const RegisterForm = () => {
                 required
                 className="dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
               />
-              <Label htmlFor="lastName" className="dark:text-gray-200">Last Name</Label>
+              <Label htmlFor="lastName" className="dark:text-gray-200">
+                Last Name
+              </Label>
               <Input
                 id="lastName"
                 name="lastName"
@@ -221,7 +232,9 @@ const RegisterForm = () => {
             {/* Role-specific fields */}
             {formData.role === "STUDENT" && (
               <div className="space-y-2">
-                <Label htmlFor="rollNumber" className="dark:text-gray-200">Roll Number</Label>
+                <Label htmlFor="rollNumber" className="dark:text-gray-200">
+                  Roll Number
+                </Label>
                 <Input
                   id="rollNumber"
                   name="rollNumber"
@@ -235,7 +248,9 @@ const RegisterForm = () => {
                   className="dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                 />
 
-                <Label htmlFor="phoneNumber" className="dark:text-gray-200">Phone number</Label>
+                <Label htmlFor="phoneNumber" className="dark:text-gray-200">
+                  Phone number
+                </Label>
                 <Input
                   id="phoneNumber"
                   name="phoneNumber"
@@ -254,7 +269,9 @@ const RegisterForm = () => {
                   </Alert>
                 )}
 
-                <Label htmlFor="aparId" className="dark:text-gray-200">APAR id</Label>
+                <Label htmlFor="aparId" className="dark:text-gray-200">
+                  APAR id
+                </Label>
                 <Input
                   id="aparId"
                   name="aparId"
@@ -270,7 +287,12 @@ const RegisterForm = () => {
                   className="dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                 />
 
-                <Label htmlFor="admission_academic_year" className="dark:text-gray-200">Admission date</Label>
+                <Label
+                  htmlFor="admission_academic_year"
+                  className="dark:text-gray-200"
+                >
+                  Admission date
+                </Label>
                 <Input
                   id="admission_academic_year"
                   name="admission_academic_year"
@@ -300,11 +322,16 @@ const RegisterForm = () => {
                     }
                     className="h-4 w-4 accent-green-600"
                   />
-                  <Label htmlFor="lateralEntry" className="mb-0 dark:text-gray-200">
+                  <Label
+                    htmlFor="lateralEntry"
+                    className="mb-0 dark:text-gray-200"
+                  >
                     Lateral Entry
                   </Label>
                 </div>
-                <Label htmlFor="year" className="dark:text-gray-200">Year</Label>
+                <Label htmlFor="year" className="dark:text-gray-200">
+                  Year
+                </Label>
                 <Select
                   value={(formData.profileData as any).year || ""}
                   onValueChange={handleYearChange}
@@ -320,7 +347,9 @@ const RegisterForm = () => {
                   </SelectContent>
                 </Select>
 
-                <Label htmlFor="dateOfBirth" className="dark:text-gray-200">Date of Birth</Label>
+                <Label htmlFor="dateOfBirth" className="dark:text-gray-200">
+                  Date of Birth
+                </Label>
                 <Input
                   id="dateOfBirth"
                   name="dateOfBirth"
@@ -335,7 +364,9 @@ const RegisterForm = () => {
                   className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
 
-                <Label htmlFor="semester" className="dark:text-gray-200">Semester</Label>
+                <Label htmlFor="semester" className="dark:text-gray-200">
+                  Semester
+                </Label>
                 <Select
                   value={(formData.profileData as any).semester || ""}
                   onValueChange={(value) =>
@@ -356,7 +387,9 @@ const RegisterForm = () => {
                   </SelectContent>
                 </Select>
 
-                <Label htmlFor="department" className="dark:text-gray-200">Department</Label>
+                <Label htmlFor="department" className="dark:text-gray-200">
+                  Department
+                </Label>
                 <Select
                   value={(formData.profileData as any).department || ""}
                   onValueChange={(value) =>
@@ -379,7 +412,9 @@ const RegisterForm = () => {
                 </Select>
 
                 {/* New Section select */}
-                <Label htmlFor="section" className="dark:text-gray-200">Section</Label>
+                <Label htmlFor="section" className="dark:text-gray-200">
+                  Section
+                </Label>
                 <Select
                   value={(formData.profileData as any).section || ""}
                   onValueChange={(value) =>
@@ -398,7 +433,9 @@ const RegisterForm = () => {
                   </SelectContent>
                 </Select>
 
-                <Label htmlFor="transport" className="dark:text-gray-200">Transport</Label>
+                <Label htmlFor="transport" className="dark:text-gray-200">
+                  Transport
+                </Label>
                 <Select
                   value={(formData.profileData as any).transport || ""}
                   onValueChange={(value) =>
@@ -420,7 +457,9 @@ const RegisterForm = () => {
                 {/* Show bus route if College Bus is selected */}
                 {(formData.profileData as any).transport === "College Bus" && (
                   <>
-                    <Label htmlFor="busRoute" className="dark:text-gray-200">Bus Route</Label>
+                    <Label htmlFor="busRoute" className="dark:text-gray-200">
+                      Bus Route
+                    </Label>
                     <Select
                       value={(formData.profileData as any).busRoute || ""}
                       onValueChange={(value) =>
@@ -447,7 +486,9 @@ const RegisterForm = () => {
                   </>
                 )}
 
-                <Label htmlFor="address" className="dark:text-gray-200">Residential Address</Label>
+                <Label htmlFor="address" className="dark:text-gray-200">
+                  Residential Address
+                </Label>
                 <Input
                   id="address"
                   name="address"
@@ -459,7 +500,12 @@ const RegisterForm = () => {
                   className="dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                 />
 
-                <Label htmlFor="parentPhoneNumber" className="dark:text-gray-200">Parent Phone Number</Label>
+                <Label
+                  htmlFor="parentPhoneNumber"
+                  className="dark:text-gray-200"
+                >
+                  Parent Phone Number
+                </Label>
                 <Input
                   id="parentPhoneNumber"
                   name="parentPhoneNumber"
@@ -476,7 +522,9 @@ const RegisterForm = () => {
             {formData.role === "FACULTY" && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber" className="dark:text-gray-200">Phone number</Label>
+                  <Label htmlFor="phoneNumber" className="dark:text-gray-200">
+                    Phone number
+                  </Label>
                   <Input
                     id="phoneNumber"
                     name="phoneNumber"
@@ -518,7 +566,9 @@ const RegisterForm = () => {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="password" className="dark:text-gray-200">Password</Label>
+              <Label htmlFor="password" className="dark:text-gray-200">
+                Password
+              </Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -629,7 +679,9 @@ const RegisterForm = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="dark:text-gray-200">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="dark:text-gray-200">
+                Confirm Password
+              </Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"

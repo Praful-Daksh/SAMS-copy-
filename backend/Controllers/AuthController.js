@@ -1,7 +1,5 @@
-const {
-  User,
-} = require("../Models/User");
-const PendingUser = require("../Models/PendingUsers")
+const { User } = require("../Models/User");
+const PendingUser = require("../Models/PendingUsers");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const classInfo = require("../Models/Class");
@@ -15,13 +13,39 @@ const registerUser = async (req, res) => {
   try {
     const { email, password, role, profileData } = req.body;
 
-    const existingUser = await User.findOne({ email });
-    const existingPending = await PendingUser.findOne({ email });
+    let existingUser = false;
+    let existingPending = false;
+
+    if (role === "STUDENT") {
+      const existingUserRecord = await User.findOne({
+        $or: [
+          { email: email },
+          { aparId: profileData.aparId },
+          { rollNumber: profileData.rollNumber },
+        ],
+      });
+      if (existingUserRecord) existingUser = true;
+
+      const existingPendingRecord = await PendingUser.findOne({
+        $or: [
+          { email: email },
+          { "profileData.aparId": profileData.aparId },
+          { "profileData.rollNumber": profileData.rollNumber },
+        ],
+      });
+      if (existingPendingRecord) existingPending = true;
+    } else {
+      const existingUserRecord = await User.findOne({ email });
+      if (existingUserRecord) existingUser = true;
+
+      const existingPendingRecord = await PendingUser.findOne({ email });
+      if (existingPendingRecord) existingPending = true;
+    }
 
     if (existingUser || existingPending) {
       return res.status(400).json({
         message:
-          "A user with this email is already registered or pending approval.",
+          "A user with this email/rollNumber/aparId is already registered or pending for approval.",
         success: false,
       });
     }
@@ -41,7 +65,6 @@ const registerUser = async (req, res) => {
       message: "Registration request submitted. Awaiting admin approval.",
       success: true,
     });
-
   } catch (error) {
     console.error(error);
     if (error.code === 11000) {
@@ -211,7 +234,7 @@ const getProfile = async (req, res) => {
     }
     res.json({ user, success: true });
   } catch (error) {
-    console.log("Something's wrong in getting profile",error);
+    console.log("Something's wrong in getting profile", error);
     res.status(500).json({ message: "Internal server error", success: false });
   }
 };

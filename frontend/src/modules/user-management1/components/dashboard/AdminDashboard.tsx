@@ -11,28 +11,7 @@ import { Badge } from "@/common/components/ui/badge";
 import { Button } from "@/common/components/ui/button";
 import DashboardNav from "./DashboardNav";
 import { Bar, Pie } from "react-chartjs-2";
-import {
-  Users,
-  UserCheck,
-  Activity,
-  Database,
-  LayoutDashboard,
-  CalendarDays,
-  Home,
-  User,
-  Settings,
-  HelpCircle,
-  BookOpen,
-  Menu,
-  Bell,
-  ClipboardList,
-  FileText,
-  BarChart2,
-  CheckSquare,
-  Award,
-  Megaphone,
-  LogOut,
-} from "lucide-react";
+import { Users, CalendarDays } from "lucide-react";
 import { useAuthStore } from "@/modules/user-management1/store/authStore";
 import {
   Carousel,
@@ -42,6 +21,7 @@ import {
   CarouselPrevious,
 } from "@/common/components/ui/carousel";
 import { authService } from "@/modules/user-management1/services/auth.service";
+import PendingUsers from "./PendingUsers";
 import {
   UserRole,
   StudentProfile,
@@ -63,30 +43,6 @@ import {
   AvatarFallback,
 } from "@/common/components/ui/avatar";
 
-// --- Mock Data ---
-const recentActivity = [
-  {
-    title: "New User Registration",
-    description: "5 new students registered today",
-    badge: "Today",
-    icon: <UserCheck className="h-4 w-4 text-green-500" />,
-    bg: "bg-green-50 dark:bg-green-900/20",
-  },
-  {
-    title: "Database Backup",
-    description: "Automatic backup completed successfully",
-    badge: "2 hours ago",
-    icon: <Database className="h-4 w-4 text-blue-500" />,
-    bg: "bg-blue-50 dark:bg-blue-900/20",
-  },
-  {
-    title: "Security Alert",
-    description: "Multiple failed login attempts detected",
-    badge: "Yesterday",
-    icon: <Activity className="h-4 w-4 text-orange-500" />,
-    bg: "bg-orange-50 dark:bg-orange-900/20",
-  },
-];
 
 const timetableTable = [
   // Year 1
@@ -213,6 +169,8 @@ const sectionIds = [
   "settings",
 ];
 
+
+
 const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState(sectionIds[0]);
   const [selectedYear, setSelectedYear] = useState("1");
@@ -244,7 +202,7 @@ const AdminDashboard = () => {
 
   // User Management Tab State
   const [userManagementTab, setUserManagementTab] = useState<
-    "users" | "hod-assignments"
+    "users" | "hod-assignments" | "pending-users"
   >("users");
 
   // Modal state
@@ -335,6 +293,27 @@ const AdminDashboard = () => {
     };
     fetchDashboard();
   }, []);
+
+  // pending users tab
+  const [pendingUserType, setPendingUserType] = useState<UserRole>("STUDENT");
+  const [pendingUsers, setPendingUsers] = useState([]);
+
+  useEffect(() => {
+    if (userManagementTab !== "pending-users") return;
+
+    const fetchPendingUsers = async () => {
+      let url = `/userData/pendingUsers?role=${pendingUserType}`;
+      if (pendingUserType == "STUDENT") {
+        url = `/userData/pendingUsers?role=STUDENT&&year=${studentYear}&&department=${studentBranch}`;
+      }
+      const res = await apiClient.get(url);
+      if (res.data.success) {
+        const result = res.data.pendingUsers;
+        setPendingUsers(result);
+      }
+    };
+    fetchPendingUsers();
+  }, [pendingUserType, userManagementTab, studentYear, studentBranch]);
 
   // User Distribution State
   const [userCounts, setUserCounts] = useState({
@@ -443,7 +422,7 @@ const AdminDashboard = () => {
   }, [selectedYear]);
 
   const branches = ["CSE", "ECE", "EEE", "MECH", "CSD", "CSM"];
-  const sections = ["1", "2", "3"]; // You can adjust this as needed
+  const sections = ["1", "2", "3"];
 
   // Add state for dynamic department stats
   const [departmentStats, setDepartmentStats] = useState([]);
@@ -498,7 +477,7 @@ const AdminDashboard = () => {
   // Scroll event for active section
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 120; // Offset for nav
+      const scrollPosition = window.scrollY + 120;
       let current = "overview";
       for (const id of sectionIds) {
         const ref = sectionRefs[id];
@@ -803,6 +782,17 @@ const AdminDashboard = () => {
                     }`}
                   >
                     HOD Assignments
+                  </button>
+
+                  <button
+                    onClick={() => setUserManagementTab("pending-users")}
+                    className={`px-3 py-2 font-medium text-sm border-b-2 transition-colors ${
+                      userManagementTab === "pending-users"
+                        ? "border-blue-500 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    Pending
                   </button>
                 </div>
 
@@ -1130,6 +1120,65 @@ const AdminDashboard = () => {
                 {userManagementTab === "hod-assignments" && (
                   <div>
                     <HODAssignmentManager />
+                  </div>
+                )}
+
+                {userManagementTab === "pending-users" && (
+                  <div>
+                    <div className="mb-4 flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                      <div className="flex gap-2 items-center w-full sm:w-auto">
+                        <label htmlFor="userType" className="font-semibold">
+                          User Type:
+                        </label>
+                        <select 
+                          id="userType"
+                          value={pendingUserType}
+                          onChange={(e) =>
+                            setPendingUserType(e.target.value as UserRole)
+                          }
+                          className="border rounded px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        >
+                          <option value="STUDENT">Student</option>
+                          <option value="FACULTY">Faculty</option>
+                          <option value="HOD">HOD</option>
+                        </select>
+                      </div>
+
+                      {pendingUserType === "STUDENT" && (
+                        <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
+                          <label className="font-semibold">Year:</label>
+                          <select
+                            value={studentYear}
+                            onChange={(e) => setStudentYear(e.target.value)}
+                            className="border rounded px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          >
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                          </select>
+                          <label className="font-semibold">Branch:</label>
+                          <select
+                            value={studentBranch}
+                            onChange={(e) => setStudentBranch(e.target.value)}
+                            className="border rounded px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          >
+                            <option value="CSE">CSE</option>
+                            <option value="ECE">ECE</option>
+                            <option value="EEE">EEE</option>
+                            <option value="MECH">MECH</option>
+                            <option value="CSD">CSD</option>
+                            <option value="CSM">CSM</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    <PendingUsers
+                      users={pendingUsers}
+                      onApprove={(user) => console.log("approved !!")}
+                      onReject={(user) => console.log("rejected!!")}
+                    />
                   </div>
                 )}
               </CardContent>

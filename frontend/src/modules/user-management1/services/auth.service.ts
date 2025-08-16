@@ -20,10 +20,10 @@ class AuthService {
     }
   }
   
-  async register(data: RegisterData): Promise<void> {
+  async register(data: RegisterData): Promise<boolean> {
     try {
-      await apiClient.post('/auth/register', data);
-      
+      const res = await apiClient.post('/auth/register', data);
+      return res.data.success;
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
         console.error('Registration error:', error.response?.data || error);
