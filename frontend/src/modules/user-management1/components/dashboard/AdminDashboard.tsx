@@ -7,19 +7,14 @@ import {
   CardTitle,
   CardDescription,
 } from "@/common/components/ui/card";
-import { Badge } from "@/common/components/ui/badge";
 import { Button } from "@/common/components/ui/button";
 import DashboardNav from "./DashboardNav";
 import { Bar, Pie } from "react-chartjs-2";
-import { Users, CalendarDays } from "lucide-react";
-import { useAuthStore } from "@/modules/user-management1/store/authStore";
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/common/components/ui/carousel";
+  Users,
+  CalendarDays,
+} from "lucide-react";
+import { useAuthStore } from "@/modules/user-management1/store/authStore";
 import { authService } from "@/modules/user-management1/services/auth.service";
 import PendingUsers from "./PendingUsers";
 import {
@@ -43,8 +38,8 @@ import {
   AvatarFallback,
 } from "@/common/components/ui/avatar";
 
+
 const timetableTable = [
-  // Year 1
   {
     class: "CSE",
     year: "1",
@@ -78,7 +73,6 @@ const timetableTable = [
     faculty: "Mr. Singh",
   },
 
-  // Year 2
   {
     class: "CSE",
     year: "2",
@@ -104,7 +98,6 @@ const timetableTable = [
     faculty: "Prof. Iyer",
   },
 
-  // Year 3
   {
     class: "CSE",
     year: "3",
@@ -114,7 +107,6 @@ const timetableTable = [
     faculty: "Dr. Gupta",
   },
 
-  // Year 4
   {
     class: "MECH",
     year: "4",
@@ -138,12 +130,6 @@ const reports = [
     title: "Communication Log",
     description: "Parent and student communication records.",
   },
-];
-
-const departmentStats = [
-  { department: "CSE", students: 320, faculty: 20, hod: "Dr. Priya Sharma" },
-  { department: "ECE", students: 210, faculty: 15, hod: "Dr. R. Sharma" },
-  { department: "MECH", students: 180, faculty: 12, hod: "Dr. P. Singh" },
 ];
 
 const announcements = [
@@ -194,7 +180,6 @@ const AdminDashboard = () => {
     )[]
   >([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  // Add state for student year, branch, section
   const [studentYear, setStudentYear] = useState("1");
   const [studentBranch, setStudentBranch] = useState("CSE");
   const [studentSection, setStudentSection] = useState("1");
@@ -421,7 +406,7 @@ const AdminDashboard = () => {
   }, [selectedYear]);
 
   const branches = ["CSE", "ECE", "EEE", "MECH", "CSD", "CSM"];
-  const sections = ["1", "2", "3"];
+  const sections = ["1", "2", "3"]; 
 
   // Add state for dynamic department stats
   const [departmentStats, setDepartmentStats] = useState([]);
@@ -476,7 +461,7 @@ const AdminDashboard = () => {
   // Scroll event for active section
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 120;
+      const scrollPosition = window.scrollY + 120; 
       let current = "overview";
       for (const id of sectionIds) {
         const ref = sectionRefs[id];
@@ -523,9 +508,7 @@ const AdminDashboard = () => {
     const slots = timetableData.map(
       (slot) => `${slot.startTime}-${slot.endTime}`
     );
-    // Remove duplicates and sort by start time
     const unique = Array.from(new Set(slots));
-    // Sort by start time (in minutes)
     unique.sort((a, b) => {
       const [aStart] = a.split("-");
       const [bStart] = b.split("-");
@@ -538,7 +521,6 @@ const AdminDashboard = () => {
     return unique;
   }, [timetableData]);
 
-  // Replace pieData with real-time data
   const pieData = useMemo(
     () => ({
       labels: ["Students", "Faculty", "HODs"],
@@ -853,7 +835,6 @@ const AdminDashboard = () => {
                             <option value="1">1</option>
                             <option value="2">2</option>
                             <option value="3">3</option>
-                            {/* Add more sections as needed */}
                           </select>
                         </div>
                       )}

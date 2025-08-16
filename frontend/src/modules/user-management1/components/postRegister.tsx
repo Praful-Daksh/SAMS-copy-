@@ -64,10 +64,7 @@ const ApprovalPending: React.FC = () => {
               <strong>Date of Birth:</strong> {studentProfile.dateOfBirth}
             </p>
             <p>
-              <strong>Course Program:</strong> {studentProfile.courseProgram}
-            </p>
-            <p>
-              <strong>Branch:</strong> {studentProfile.branch}
+              <strong>Branch:</strong> {studentProfile.department}
             </p>
             <p>
               <strong>Semester:</strong> {studentProfile.semester}
