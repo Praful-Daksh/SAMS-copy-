@@ -43,7 +43,6 @@ import {
   AvatarFallback,
 } from "@/common/components/ui/avatar";
 
-
 const timetableTable = [
   // Year 1
   {
