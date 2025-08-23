@@ -1,7 +1,6 @@
 import apiClient from '@/api';
 import { LoginCredentials, RegisterData,BaseUserProfile, StudentProfile, FacultyProfile, AdminProfile, HODProfile, GuestProfile } from '@/modules/user-management1/types/auth.types';
-import { useNavigate } from 'react-router-dom';
-const navigate = useNavigate();
+
 class AuthService {
 
   async login(credentials: LoginCredentials): Promise<{ user: BaseUserProfile; token: string }> {

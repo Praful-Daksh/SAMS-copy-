@@ -193,42 +193,42 @@ const AdminDashboard = () => {
   const [editUserModal, setEditUserModal] = useState<{
     open: boolean;
     user:
-      | StudentProfile
-      | FacultyProfile
-      | AdminProfile
-      | HODProfile
-      | { [key: string]: unknown }
-      | null;
+    | StudentProfile
+    | FacultyProfile
+    | AdminProfile
+    | HODProfile
+    | { [key: string]: unknown }
+    | null;
   }>({ open: false, user: null });
   const [deleteUserModal, setDeleteUserModal] = useState<{
     open: boolean;
     user:
-      | StudentProfile
-      | FacultyProfile
-      | AdminProfile
-      | HODProfile
-      | { [key: string]: unknown }
-      | null;
+    | StudentProfile
+    | FacultyProfile
+    | AdminProfile
+    | HODProfile
+    | { [key: string]: unknown }
+    | null;
   }>({ open: false, user: null });
   const [assignDeptModal, setAssignDeptModal] = useState<{
     open: boolean;
     user:
-      | StudentProfile
-      | FacultyProfile
-      | AdminProfile
-      | HODProfile
-      | { [key: string]: unknown }
-      | null;
+    | StudentProfile
+    | FacultyProfile
+    | AdminProfile
+    | HODProfile
+    | { [key: string]: unknown }
+    | null;
   }>({ open: false, user: null });
   const [assignTeacherModal, setAssignTeacherModal] = useState<{
     open: boolean;
     user:
-      | StudentProfile
-      | FacultyProfile
-      | AdminProfile
-      | HODProfile
-      | { [key: string]: unknown }
-      | null;
+    | StudentProfile
+    | FacultyProfile
+    | AdminProfile
+    | HODProfile
+    | { [key: string]: unknown }
+    | null;
   }>({ open: false, user: null });
 
   //load admin dashboard
@@ -265,8 +265,8 @@ const AdminDashboard = () => {
           };
           setError(
             errorObj.response?.data?.message ||
-              errorObj.message ||
-              "Failed to fetch dashboard data"
+            errorObj.message ||
+            "Failed to fetch dashboard data"
           );
         } else {
           setError("Failed to fetch dashboard data");
@@ -281,6 +281,8 @@ const AdminDashboard = () => {
   // pending users tab
   const [pendingUserType, setPendingUserType] = useState<UserRole>("STUDENT");
   const [pendingUsers, setPendingUsers] = useState([]);
+  const [pendingStudentYear, setPendingStudentYear] = useState("0");
+  const [pendingStudentBranch, setPendingStudentBranch] = useState("All");
 
   useEffect(() => {
     if (userManagementTab !== "pending-users") return;
@@ -288,7 +290,7 @@ const AdminDashboard = () => {
     const fetchPendingUsers = async () => {
       let url = `/userData/pendingUsers?role=${pendingUserType}`;
       if (pendingUserType == "STUDENT") {
-        url = `/userData/pendingUsers?role=STUDENT&&year=${studentYear}&&department=${studentBranch}`;
+        url = `/userData/pendingUsers?role=STUDENT&&year=${pendingStudentYear == "0" ? "" : pendingStudentYear}&&department=${pendingStudentBranch == "All" ? "" : pendingStudentBranch}`;
       }
       const res = await apiClient.get(url);
       if (res.data.success) {
@@ -297,7 +299,7 @@ const AdminDashboard = () => {
       }
     };
     fetchPendingUsers();
-  }, [pendingUserType, userManagementTab, studentYear, studentBranch]);
+  }, [pendingUserType, userManagementTab, pendingStudentBranch, pendingStudentYear]);
 
   // User Distribution State
   const [userCounts, setUserCounts] = useState({
@@ -406,7 +408,7 @@ const AdminDashboard = () => {
   }, [selectedYear]);
 
   const branches = ["CSE", "ECE", "EEE", "MECH", "CSD", "CSM"];
-  const sections = ["1", "2", "3"]; 
+  const sections = ["1", "2", "3"];
 
   // Add state for dynamic department stats
   const [departmentStats, setDepartmentStats] = useState([]);
@@ -461,7 +463,7 @@ const AdminDashboard = () => {
   // Scroll event for active section
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 120; 
+      const scrollPosition = window.scrollY + 120;
       let current = "overview";
       for (const id of sectionIds) {
         const ref = sectionRefs[id];
@@ -746,32 +748,29 @@ const AdminDashboard = () => {
                 <div className="flex flex-col sm:flex-row border-b border-gray-200 mb-4 gap-2 sm:gap-0">
                   <button
                     onClick={() => setUserManagementTab("users")}
-                    className={`px-3 py-2 font-medium text-sm border-b-2 transition-colors ${
-                      userManagementTab === "users"
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`px-3 py-2 font-medium text-sm border-b-2 transition-colors ${userManagementTab === "users"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     Users
                   </button>
                   <button
                     onClick={() => setUserManagementTab("hod-assignments")}
-                    className={`px-3 py-2 font-medium text-sm border-b-2 transition-colors ${
-                      userManagementTab === "hod-assignments"
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`px-3 py-2 font-medium text-sm border-b-2 transition-colors ${userManagementTab === "hod-assignments"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     HOD Assignments
                   </button>
 
                   <button
                     onClick={() => setUserManagementTab("pending-users")}
-                    className={`px-3 py-2 font-medium text-sm border-b-2 transition-colors ${
-                      userManagementTab === "pending-users"
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`px-3 py-2 font-medium text-sm border-b-2 transition-colors ${userManagementTab === "pending-users"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     Pending
                   </button>
@@ -849,24 +848,22 @@ const AdminDashboard = () => {
                             users.map((user, idx) => {
                               const name =
                                 "firstName" in user && "lastName" in user
-                                  ? `${
-                                      (
-                                        user as
-                                          | StudentProfile
-                                          | FacultyProfile
-                                          | HODProfile
-                                      ).firstName
-                                    } ${
-                                      (
-                                        user as
-                                          | StudentProfile
-                                          | FacultyProfile
-                                          | HODProfile
-                                      ).lastName
-                                    }`
+                                  ? `${(
+                                    user as
+                                    | StudentProfile
+                                    | FacultyProfile
+                                    | HODProfile
+                                  ).firstName
+                                  } ${(
+                                    user as
+                                    | StudentProfile
+                                    | FacultyProfile
+                                    | HODProfile
+                                  ).lastName
+                                  }`
                                   : "name" in user
-                                  ? (user as { name: string }).name
-                                  : "";
+                                    ? (user as { name: string }).name
+                                    : "";
                               const email =
                                 "email" in user ? (user.email as string) : "";
                               const role =
@@ -893,11 +890,10 @@ const AdminDashboard = () => {
                                       {role}
                                     </span>
                                     <span
-                                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                        status === "Active"
-                                          ? "bg-green-100 text-green-800"
-                                          : "bg-red-100 text-red-800"
-                                      }`}
+                                      className={`px-2 py-1 rounded-full text-xs font-semibold ${status === "Active"
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-red-100 text-red-800"
+                                        }`}
                                     >
                                       {status}
                                     </span>
@@ -976,24 +972,22 @@ const AdminDashboard = () => {
                                 users.map((user, idx) => {
                                   const name =
                                     "firstName" in user && "lastName" in user
-                                      ? `${
-                                          (
-                                            user as
-                                              | StudentProfile
-                                              | FacultyProfile
-                                              | HODProfile
-                                          ).firstName
-                                        } ${
-                                          (
-                                            user as
-                                              | StudentProfile
-                                              | FacultyProfile
-                                              | HODProfile
-                                          ).lastName
-                                        }`
+                                      ? `${(
+                                        user as
+                                        | StudentProfile
+                                        | FacultyProfile
+                                        | HODProfile
+                                      ).firstName
+                                      } ${(
+                                        user as
+                                        | StudentProfile
+                                        | FacultyProfile
+                                        | HODProfile
+                                      ).lastName
+                                      }`
                                       : "name" in user
-                                      ? (user as { name: string }).name
-                                      : "";
+                                        ? (user as { name: string }).name
+                                        : "";
                                   const email =
                                     "email" in user
                                       ? (user.email as string)
@@ -1022,11 +1016,10 @@ const AdminDashboard = () => {
                                       </td>
                                       <td className="py-2 px-3">
                                         <span
-                                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                            status === "Active"
-                                              ? "bg-green-100 text-green-800"
-                                              : "bg-red-100 text-red-800"
-                                          }`}
+                                          className={`px-2 py-1 rounded-full text-xs font-semibold ${status === "Active"
+                                            ? "bg-green-100 text-green-800"
+                                            : "bg-red-100 text-red-800"
+                                            }`}
                                         >
                                           {status}
                                         </span>
@@ -1110,7 +1103,7 @@ const AdminDashboard = () => {
                         <label htmlFor="userType" className="font-semibold">
                           User Type:
                         </label>
-                        <select 
+                        <select
                           id="userType"
                           value={pendingUserType}
                           onChange={(e) =>
@@ -1128,19 +1121,20 @@ const AdminDashboard = () => {
                         <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
                           <label className="font-semibold">Year:</label>
                           <select
-                            value={studentYear}
-                            onChange={(e) => setStudentYear(e.target.value)}
+                            value={pendingStudentYear}
+                            onChange={(e) => setPendingStudentYear(e.target.value)}
                             className="border rounded px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           >
                             <option value="1">1</option>
                             <option value="2">2</option>
                             <option value="3">3</option>
                             <option value="4">4</option>
+                            <option value="0">All</option>
                           </select>
                           <label className="font-semibold">Branch:</label>
                           <select
-                            value={studentBranch}
-                            onChange={(e) => setStudentBranch(e.target.value)}
+                            value={pendingStudentBranch}
+                            onChange={(e) => setPendingStudentBranch(e.target.value)}
                             className="border rounded px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           >
                             <option value="CSE">CSE</option>
@@ -1149,6 +1143,7 @@ const AdminDashboard = () => {
                             <option value="MECH">MECH</option>
                             <option value="CSD">CSD</option>
                             <option value="CSM">CSM</option>
+                            <option value="All">All</option>
                           </select>
                         </div>
                       )}

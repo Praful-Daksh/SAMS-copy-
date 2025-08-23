@@ -6,6 +6,7 @@ interface PendingUser {
   role: "STUDENT" | "FACULTY" | "HOD" | "ADMIN";
   email: string;
   profileData: Record<string, any>;
+  createdAt: string,
 }
 
 interface PendingUsersProps {
@@ -138,14 +139,22 @@ const PendingUserRow: React.FC<{
   const [showModal, setShowModal] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [sendMail, setSendMail] = useState(true);
- 
+
+
+  const createdDate = new Date(user.createdAt);
+  const now = new Date();
+  const diffInMs = createdDate.getTime() + 7 * 24 * 60 * 60 * 1000 - now.getTime();
+  const daysLeft = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
 
   const fullName =
     user.profileData?.firstName && user.profileData?.lastName
       ? `${user.profileData.firstName} ${user.profileData.lastName}`
       : "Unnamed";
 
-      
+  const expired = daysLeft <= 0;
+
+
+
   return (
     <>
       <div className="border rounded dark:border-gray-600 bg-white dark:bg-gray-800">
@@ -153,9 +162,21 @@ const PendingUserRow: React.FC<{
           className="w-full px-4 py-2 flex justify-between items-center text-left font-medium dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition"
           onClick={() => setExpanded((prev) => !prev)}
         >
-          <span>
-            {fullName} - {user.profileData.createdAt}
-          </span>
+          <div className="flex items-center gap-2">
+            <span>
+              {fullName}
+            </span>
+            {expired ? (
+              <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full">
+                Expired
+              </span>
+            ) : (
+              <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
+                {daysLeft} day{daysLeft !== 1 ? "s" : ""} left
+              </span>
+            )}
+          </div>
+
           {expanded ? (
             <ChevronUp className="w-5 h-5" />
           ) : (
@@ -176,7 +197,9 @@ const PendingUserRow: React.FC<{
                 <strong>{key}:</strong> {String(value)}
               </p>
             ))}
-
+            <p>
+              <strong>Applied on:{" "}</strong>{new Date(user.createdAt).toLocaleString()}
+            </p>
             <div className="mt-3 flex gap-2">
               <button
                 onClick={() => setShowModal(true)}
@@ -185,7 +208,7 @@ const PendingUserRow: React.FC<{
                 Approve
               </button>
               <button
-                onClick={() => setShowRejectDialog(true)} 
+                onClick={() => setShowRejectDialog(true)}
                 className="bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
               >
                 Reject
@@ -205,50 +228,50 @@ const PendingUserRow: React.FC<{
           }}
         />
       )}
-{showRejectDialog && (
-  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-    <div className="bg-white dark:bg-gray-900 rounded shadow-lg max-w-sm w-full p-5 space-y-4">
-      <h3 className="text-lg font-semibold dark:text-white">Confirm Rejection</h3>
-      <p className="text-sm text-gray-600 dark:text-gray-300">
-        Are you sure you want to reject <strong>{fullName}</strong>?
-      </p>
+      {showRejectDialog && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+          <div className="bg-white dark:bg-gray-900 rounded shadow-lg max-w-sm w-full p-5 space-y-4">
+            <h3 className="text-lg font-semibold dark:text-white">Confirm Rejection</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Are you sure you want to reject <strong>{fullName}</strong>?
+            </p>
 
-      <div className="flex items-center space-x-2 text-sm">
-        <input
-          type="checkbox"
-          id="send-mail"
-          checked={sendMail}
-          onChange={() => setSendMail(prev => !prev)}
-          className="accent-blue-600"
-        />
-        <label htmlFor="send-mail" className="text-gray-700 dark:text-gray-300">
-          Send email for re-registration
-        </label>
-      </div>
+            <div className="flex items-center space-x-2 text-sm">
+              <input
+                type="checkbox"
+                id="send-mail"
+                checked={sendMail}
+                onChange={() => setSendMail(prev => !prev)}
+                className="accent-blue-600"
+              />
+              <label htmlFor="send-mail" className="text-gray-700 dark:text-gray-300">
+                Send email for re-registration
+              </label>
+            </div>
 
-      <div className="flex justify-end gap-2 pt-3">
-        <button
-          onClick={() => setShowRejectDialog(false)}
-          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={() => {
-            onReject?.({
-              ...user,
-              sendReRegistrationEmail: sendMail, 
-            } as PendingUser & { sendReRegistrationEmail?: boolean });
-            setShowRejectDialog(false);
-          }}
-          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          Confirm Reject
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+            <div className="flex justify-end gap-2 pt-3">
+              <button
+                onClick={() => setShowRejectDialog(false)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onReject?.({
+                    ...user,
+                    sendReRegistrationEmail: sendMail,
+                  } as PendingUser & { sendReRegistrationEmail?: boolean });
+                  setShowRejectDialog(false);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Confirm Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </>
   );
