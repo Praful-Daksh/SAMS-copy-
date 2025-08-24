@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import apiClient from "@/api";
+import { toast } from "@/common/hooks/use-toast";
 
 interface PendingUser {
-  id: string;
+  _id: string;
   role: "STUDENT" | "FACULTY" | "HOD" | "ADMIN";
   email: string;
   profileData: Record<string, any>;
@@ -153,6 +155,44 @@ const PendingUserRow: React.FC<{
 
   const expired = daysLeft <= 0;
 
+  const [loading, setLoading] = useState(false);
+
+  const approveUser = async (updatedUser: PendingUser) => {
+    try {
+      setLoading(true);
+      const res = await apiClient.post("/admin/approve", updatedUser);
+      if (res.data.success) {
+        toast({
+          title: res.data.message,
+          variant: "default",
+        });
+      }
+      onApprove?.(updatedUser);
+    } catch (err) {
+      toast({
+        title: "Hey check this !!",
+        description: err.data.message,
+        variant: "default",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const rejectUser = async (userId: string) => {
+    try {
+      setLoading(true);
+      const res = await apiClient.delete(`/admin/reject/${userId}`);
+      if (res.data.success) {
+        toast({ title: res.data.message, variant: "default" });
+      }
+      onReject?.(user);
+    } catch (err) {
+      toast({ title: "Something's Wrong", description: "Try again later", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }
 
 
   return (
@@ -223,7 +263,7 @@ const PendingUserRow: React.FC<{
           user={user}
           onClose={() => setShowModal(false)}
           onConfirm={(updatedUser) => {
-            onApprove?.(updatedUser);
+            approveUser(updatedUser);
             setShowModal(false);
           }}
         />
@@ -258,10 +298,7 @@ const PendingUserRow: React.FC<{
               </button>
               <button
                 onClick={() => {
-                  onReject?.({
-                    ...user,
-                    sendReRegistrationEmail: sendMail,
-                  } as PendingUser & { sendReRegistrationEmail?: boolean });
+                  rejectUser(user._id);
                   setShowRejectDialog(false);
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
@@ -278,23 +315,34 @@ const PendingUserRow: React.FC<{
 };
 
 const PendingUsers: React.FC<PendingUsersProps> = ({
-  users,
-  onApprove,
-  onReject,
+  users
 }) => {
+  const [allUsers, setAllUsers] = useState<PendingUser[]>([]);
+
+  useEffect(() => {
+    setAllUsers(users);
+  }, [users]);
+  const handleApprove = (approvedUser: PendingUser) => {
+    setAllUsers(prev => prev.filter(user => user._id !== approvedUser._id));
+  };
+
+  const handleReject = (rejectedUser: PendingUser) => {
+    setAllUsers(prev => prev.filter(user => user._id !== rejectedUser._id));
+  };
+
   return (
     <div className="space-y-3">
-      {users.length === 0 ? (
+      {allUsers.length === 0 ? (
         <div className="text-center text-gray-500 dark:text-gray-400">
           No Pending Users
         </div>
       ) : (
-        users.map((user) => (
+        allUsers.map((user) => (
           <PendingUserRow
-            key={user.id}
+            key={user._id}
             user={user}
-            onApprove={onApprove}
-            onReject={onReject}
+            onApprove={handleApprove}
+            onReject={handleReject}
           />
         ))
       )}

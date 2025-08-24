@@ -1151,8 +1151,6 @@ const AdminDashboard = () => {
 
                     <PendingUsers
                       users={pendingUsers}
-                      onApprove={(user) => console.log("approved !!")}
-                      onReject={(user) => console.log("rejected!!")}
                     />
                   </div>
                 )}

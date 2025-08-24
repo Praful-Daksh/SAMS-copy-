@@ -288,7 +288,7 @@ const getHodDashboard = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
     if (!assigned) {
-      return res.status(204).json({
+      return res.status(200).json({
         message: "No department is assigned to You",
         success: true,
         department: "",

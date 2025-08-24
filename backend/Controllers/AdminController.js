@@ -14,10 +14,9 @@ const Class = require("../Models/Class.js");
  * function for approve request of user for registration
  */
 const approveUser = async (req, res) => {
-  const { pendingUserId } = req.params;
-
   try {
-    const pending = await PendingUser.findById(pendingUserId);
+    const  updatedUser = req.body;
+    const pending = await PendingUser.findById(updatedUser._id);
     if (!pending) {
       return res
         .status(404)
@@ -77,7 +76,7 @@ const approveUser = async (req, res) => {
       await classDoc.save();
     }
 
-    await PendingUser.findByIdAndDelete(pendingUserId);
+    await PendingUser.findByIdAndDelete(updatedUser._id);
 
     res.status(200).json({
       message: "User approved and created",
@@ -96,11 +95,19 @@ const approveUser = async (req, res) => {
  */
 const rejectUser = async (req, res) => {
   const { pendingUserId } = req.params;
-  await PendingUser.findByIdAndDelete(pendingUserId);
-  res
-    .status(200)
-    .json({ message: "User registration request rejected", success: true });
+  try {
+    await PendingUser.findByIdAndDelete(pendingUserId);
+    return res
+      .status(200)
+      .json({ message: "User registration request rejected", success: true });
+  } catch (err) {
+    console.log("user rejecting error : ", err);
+    return res.status(500).json({
+      message: "Something's wrong at out end",
+    });
+  }
 };
+
 
 module.exports = {
   approveUser,
