@@ -3,19 +3,15 @@ const { User } = require("../Models/User.js");
 const AssignedSubject = require("../Models/AssignedSubjects.js");
 const departmentAssignment = require("../Models/AssignedDepartments.js");
 const Curriculum = require("../Models/Curriculum.js");
+const Class = require("../Models/Class.js");
 
 /**
  * Get all subjects by department, year, semester
- * (optional: curriculum filter can be added later)
+ * Now fetches subjects from curriculum based on class
  */
 const getSubjectsbyCriteria = async (req, res) => {
   try {
-    let { department, year, semester } = req.query;
-
-    const query = {};
-    if (semester) query.semester = semester;
-    if (department) query.department = department;
-    if (year) query.year = year;
+    let { department, year, semester, batch, section } = req.query;
 
     if (req.user.role === "HOD") {
       const assignedDetails = await departmentAssignment
@@ -43,10 +39,37 @@ const getSubjectsbyCriteria = async (req, res) => {
       if (!department) department = assignedDepartment;
     }
 
-    const subjects = await Subject.find(query).select("-__v");
+    // Find the class to get the curriculum
+    const classQuery = {};
+    if (department) classQuery.department = department;
+    if (year) classQuery.year = year;
+    if (semester) classQuery.semester = semester;
+    if (batch) classQuery.batch = batch;
+    if (section) classQuery.section = section;
+
+    const classDoc = await Class.findOne(classQuery).populate({
+      path: 'curriculum',
+      populate: {
+        path: 'subjectsBySemester',
+        model: 'Subject'
+      }
+    });
+
+    if (!classDoc || !classDoc.curriculum) {
+      return res.status(200).json({
+        message: "No subjects found for the given criteria",
+        subjects: [],
+        success: true,
+      });
+    }
+
+    // Get subjects for the specific semester from curriculum
+    const semesterKey = semester ? semester.toString() : '1';
+    const subjects = classDoc.curriculum.subjectsBySemester.get(semesterKey) || [];
+
     if (subjects.length === 0) {
       return res.status(200).json({
-        message: "No subjects found matching the criteria",
+        message: "No subjects found for the specified semester",
         subjects: [],
         success: true,
       });
@@ -67,19 +90,14 @@ const getSubjectsbyCriteria = async (req, res) => {
 };
 
 /**
- * Add a new subject and link to curriculum
+ * Add a new subject to curriculum
+ * This adds the subject to the curriculum for the department
  */
 const addSubject = async (req, res) => {
-  const { name, code, department, year, semester, curriculumId } = req.body;
-
-  if (!curriculumId) {
-    return res.status(400).json({
-      message: "Curriculum is required",
-      success: false,
-    });
-  }
+  const { name, code, department, semester } = req.body;
 
   try {
+    // Check if subject with same code already exists
     const existingSubject = await Subject.findOne({ code });
     if (existingSubject) {
       return res.status(400).json({
@@ -88,32 +106,39 @@ const addSubject = async (req, res) => {
       });
     }
 
+    // Create new subject
     const newSubject = new Subject({
       name,
       code,
       department,
-      year,
-      semester,
     });
 
     await newSubject.save();
 
-    // Add subject to curriculum
-    const updatedCurriculum = await Curriculum.findByIdAndUpdate(
-      curriculumId,
-      { $addToSet: { subjects: newSubject._id } },
-      { new: true }
-    );
-
-    if (!updatedCurriculum) {
-      return res.status(404).json({
-        message: "Curriculum not found",
-        success: false,
+    // Find or create curriculum for the department
+    let curriculum = await Curriculum.findOne({ department });
+    
+    if (!curriculum) {
+      curriculum = new Curriculum({
+        department,
+        subjectsBySemester: new Map()
       });
     }
 
+    // Add subject to the appropriate semester in curriculum
+    const semesterKey = semester ? semester.toString() : '1';
+    if (!curriculum.subjectsBySemester.has(semesterKey)) {
+      curriculum.subjectsBySemester.set(semesterKey, []);
+    }
+    
+    const semesterSubjects = curriculum.subjectsBySemester.get(semesterKey);
+    semesterSubjects.push(newSubject._id);
+    curriculum.subjectsBySemester.set(semesterKey, semesterSubjects);
+
+    await curriculum.save();
+
     return res.status(201).json({
-      message: "Subject added successfully",
+      message: "Subject added successfully to curriculum",
       subject: newSubject,
       success: true,
     });
@@ -131,7 +156,7 @@ const addSubject = async (req, res) => {
  */
 const assignSubject = async (req, res) => {
   const assignedBy = req.user.id;
-  const { subjectId, facultyId, section } = req.body;
+  const { subjectId, facultyId, section, department, year, semester, batch } = req.body;
 
   try {
     const subject = await Subject.findById(subjectId);
@@ -150,14 +175,31 @@ const assignSubject = async (req, res) => {
       });
     }
 
+    // Find the class for this assignment
+    const classDoc = await Class.findOne({
+      department,
+      year,
+      semester,
+      batch,
+      section
+    });
+
+    if (!classDoc) {
+      return res.status(404).json({
+        message: "Class not found for the given criteria",
+        success: false,
+      });
+    }
+
     const existingAssignment = await AssignedSubject.findOne({
       subject: subjectId,
+      class: classDoc._id,
       section,
     });
 
     if (existingAssignment) {
       return res.status(400).json({
-        message: "This subject is already assigned to a faculty",
+        message: "This subject is already assigned to a faculty for this class and section",
         success: false,
       });
     }
@@ -165,6 +207,7 @@ const assignSubject = async (req, res) => {
     const newAssignment = new AssignedSubject({
       subject: subjectId,
       faculty: facultyId,
+      class: classDoc._id,
       section,
       assignedBy,
     });
@@ -176,6 +219,7 @@ const assignSubject = async (req, res) => {
       assignment: {
         subject: subject.name,
         faculty: `${faculty.firstName} ${faculty.lastName}`,
+        class: `${department} ${year}${semester} ${batch} ${section}`,
       },
       success: true,
     });
@@ -216,9 +260,43 @@ const deleteSubjectAssignment = async (req, res) => {
   }
 };
 
+/**
+ * Get curriculum for a department
+ */
+const getCurriculum = async (req, res) => {
+  const { department } = req.query;
+
+  try {
+    const curriculum = await Curriculum.findOne({ department }).populate({
+      path: 'subjectsBySemester',
+      model: 'Subject'
+    });
+
+    if (!curriculum) {
+      return res.status(404).json({
+        message: "Curriculum not found for the department",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Curriculum fetched successfully",
+      curriculum,
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
 module.exports = {
   getSubjectsbyCriteria,
   addSubject,
   assignSubject,
   deleteSubjectAssignment,
+  getCurriculum,
 };

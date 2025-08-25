@@ -5,6 +5,7 @@ const {
   getFacultyDashboard,
   getHodDashboard,
   getAdminDashboard,
+  getStudentAcademicDetails,
 } = require("../Controllers/DashboardController");
 const tokenRefresher = require("../Middlewares/TokenRefresher");
 const DashboardRouter = express.Router();
@@ -14,6 +15,13 @@ DashboardRouter.get(
   ensureAuthenticated(["STUDENT"]),
   tokenRefresher,
   getStudentDashboard
+);
+
+DashboardRouter.get(
+  "/student-academic-details",
+  ensureAuthenticated(["STUDENT"]),
+  tokenRefresher,
+  getStudentAcademicDetails
 );
 
 DashboardRouter.get(

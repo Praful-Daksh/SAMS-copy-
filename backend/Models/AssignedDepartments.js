@@ -11,7 +11,7 @@ const departmentAssignmentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    years: [
+    departmentYears: [
       {
         type: Number,
         required: true,

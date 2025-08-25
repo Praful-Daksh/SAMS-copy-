@@ -52,9 +52,7 @@ const markAttendanceValidation = (req, res, next) => {
   });
 
   const schema = joi.object({
-    department: joi.string().required(),
-    year: joi.number().required(),
-    section: joi.number().required(),
+    classId: joi.string().length(24).hex().required(),
     subjectId: joi.string().length(24).hex().required(),
     studentsAttendance: studentsAttendanceSchema.required(),
   });

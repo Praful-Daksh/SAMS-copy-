@@ -5,6 +5,8 @@ const TimeTable = require("../Models/TimeTable");
 const { User } = require("../Models/User");
 const Subject = require("../Models/Subject.js");
 const departmentAssignment = require("../Models/AssignedDepartments.js");
+const Curriculum = require("../Models/Curriculum.js");
+
 /**
  * student dashboard function
  * currently returns time table and the subject, faculty info and student attendance for each subject
@@ -22,10 +24,16 @@ const getStudentDashboard = async (req, res) => {
       });
     }
     //finding class
-    const { department, year, section, batch } = student;
+    const { department, year, section, batch, semester } = student;
     const classDoc = await classInfo
-      .findOne({ department, year, section, batch })
-      .populate({ path: "subjects.subject", select: "name code" })
+      .findOne({ department, year, section, batch, semester })
+      .populate({
+        path: "curriculum",
+        populate: {
+          path: "subjectsBySemester",
+          model: "Subject"
+        }
+      })
       .select("-students");
     if (!classDoc) {
       return res.status(404).json({
@@ -63,10 +71,16 @@ const getStudentAcademicDetails = async (req, res) => {
         success: false,
       });
     }
-    const {department, year, section, batch} = student;
+    const {department, year, section, batch, semester} = student;
     const classDoc = await classInfo
-      .findOne({ department, year, section, batch })
-      .populate({ path: "subjects.subject", select: "name code" })
+      .findOne({ department, year, section, batch, semester })
+      .populate({
+        path: "curriculum",
+        populate: {
+          path: "subjectsBySemester",
+          model: "Subject"
+        }
+      })
       .select("-students");
 
     if (!classDoc) {
@@ -81,60 +95,54 @@ const getStudentAcademicDetails = async (req, res) => {
       .select("-_id -class -timeSlots._id")
       .lean();
 
+    // Get subjects for the current semester from curriculum
+    const semesterKey = semester.toString();
+    const subjects = classDoc.curriculum.subjectsBySemester.get(semesterKey) || [];
+
     let attendanceAndFacultyInfo = [];
-    if (classDoc.subjects.length > 0) {
+    if (subjects.length > 0) {
       const subjectsInfo = await Promise.all(
-        classDoc.subjects.map(async (individual) => {
+        subjects.map(async (subject) => {
           const faculty = await AssignedSubject.findOne({
-            subject: individual.subject._id,
+            subject: subject._id,
+            class: classDoc._id,
             section: section,
           })
             .populate("faculty")
             .lean();
           //attendance
           const attendanceRecords = await Attendance.find({
-            subject: individual.subject._id,
+            subject: subject._id,
+            class: classDoc._id,
           })
             .select("-__v")
             .lean();
           let totalClasses = attendanceRecords.length;
-          let totalAttended = 0;
-          if (totalClasses > 0) {
-            attendanceRecords.forEach((record) => {
-              if (record.students && record.students.length > 0) {
-                record.students.forEach((studentAtt) => {
-                  if (
-                    studentAtt.studentId.toString() === studentId.toString() &&
-                    studentAtt.status &&
-                    studentAtt.status.toLowerCase() === "present"
-                  ) {
-                    totalAttended++;
-                  }
-                });
-              }
-            });
-          }
-
+          let attendedClasses = 0;
+          attendanceRecords.forEach((record) => {
+            const studentRecord = record.students.find(
+              (s) => s.studentId.toString() === studentId
+            );
+            if (studentRecord && studentRecord.status === "Present") {
+              attendedClasses++;
+            }
+          });
           return {
             subject: {
-              subjectName: individual.subject.name,
-              subjectCode: individual.subject.code,
+              _id: subject._id,
+              name: subject.name,
+              code: subject.code,
             },
-            faculty:
-              faculty && faculty.faculty
-                ? {
-                    facultyName:
-                      faculty.faculty.firstName.charAt(0).toUpperCase() +
-                      faculty.faculty.firstName.slice(1).toLowerCase() +
-                      " " +
-                      (faculty.faculty.lastName.charAt(0).toUpperCase() +
-                        faculty.faculty.lastName.slice(1).toLowerCase()),
-                    email: faculty.faculty.email,
-                  }
-                : null,
+            faculty: faculty
+              ? {
+                  _id: faculty.faculty._id,
+                  name: `${faculty.faculty.firstName} ${faculty.faculty.lastName}`,
+                }
+              : null,
             attendance: {
               totalClasses,
-              totalAttended,
+              attendedClasses,
+              percentage: totalClasses > 0 ? (attendedClasses / totalClasses) * 100 : 0,
             },
           };
         })
@@ -143,17 +151,17 @@ const getStudentAcademicDetails = async (req, res) => {
     }
 
     return res.status(200).json({
-      message: "Student Dashboard Info are ..",
+      message: "Student Academic Details fetched successfully",
       success: true,
       data: {
-        timeTable: schedule && schedule.timeSlots ? schedule.timeSlots : [],
-        attendanceAndFacultyInfo,
+        schedule,
+        subjects: attendanceAndFacultyInfo,
       },
     });
   } catch (err) {
-    console.log("student academic details Error", err);
+    console.log("StudentAcademicDetails Error", err);
     return res.status(500).json({
-      message: "Internal Server at Student Dashboard",
+      message: "Internal Server Error at Student Academic Details",
     });
   }
 };

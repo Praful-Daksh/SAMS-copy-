@@ -424,13 +424,32 @@ const FacultyDashboard = () => {
         );
         if (!selected) return;
 
-        const response = await apiClient.get(
-          `/attendance/byDate?department=${selected.subject.department}&year=${selected.subject.year}&section=${selected.section}&subjectId=${selected.subject.id}&date=${attendanceDate}`
-        );
+        // First get the class details to get classId
+        const classResponse = await apiClient.get("/class/details", {
+          params: {
+            department: selected.subject.department,
+            year: selected.subject.year,
+            section: selected.section,
+            semester: selected.subject.semester
+          }
+        });
+
+        if (!classResponse.data.success) {
+          throw new Error("Class not found");
+        }
+
+        const classId = classResponse.data.classDetails._id;
+
+        const response = await apiClient.get("/attendance/by-date", {
+          params: {
+            classId: classId,
+            subjectId: selected.subject.id,
+            date: attendanceDate
+          }
+        });
 
         const att = response.data.attendance;
         if (att && att.students && att.students.length > 0) {
-          // Attendance exists for this date
           setAttendance(
             att.students.map((s: AttendanceStudent) => ({
               id: s.studentId,
@@ -441,7 +460,6 @@ const FacultyDashboard = () => {
           );
           setAttendanceEditable(false);
         } else if (isToday(attendanceDate)) {
-          // No attendance found for this date, initialize with students
           setAttendance(
             (studentsForSelectedClass || []).map((s) => ({
               id: s.id,
@@ -455,7 +473,7 @@ const FacultyDashboard = () => {
           setAttendance([]);
           setAttendanceEditable(false);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching attendance:", err);
         setAttendance([]);
         setAttendanceEditable(false);

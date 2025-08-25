@@ -14,19 +14,21 @@ const newAssignment = async (req, res) => {
       });
     }
 
-    const doExist = await classInfo
-      .find({ department, year: { $in: years } })
-      .select("year")
-      .lean();
+    // const doExist = await classInfo
+    //   .find({ department, year: { $in: years } })
+    //   .select("year")
+    //   .lean();
 
-    if (doExist.length === 0) {
-      return res.status(404).json({
-        message: "Requested department and years do not exist.",
-        success: false,
-      });
-    }
+    // if (doExist.length === 0) {
+    //   return res.status(404).json({
+    //     message: "Requested department and years do not exist.",
+    //     success: false,
+    //   });
+    // }
 
-    const isHodAlreadyAssigned = await departmentAssignment.findOne({ hod: hodId });
+    const isHodAlreadyAssigned = await departmentAssignment.findOne({
+      hod: hodId,
+    });
     if (isHodAlreadyAssigned) {
       return res.status(409).json({
         success: false,
@@ -34,7 +36,9 @@ const newAssignment = async (req, res) => {
       });
     }
 
-    const existingAssignments = await departmentAssignment.find({ department }).lean();
+    const existingAssignments = await departmentAssignment
+      .find({ department })
+      .lean();
 
     const alreadyAssignedYears = new Set();
     existingAssignments.forEach((assignment) => {
@@ -59,7 +63,9 @@ const newAssignment = async (req, res) => {
     await assignment.save();
 
     return res.status(201).json({
-      message: `Department assigned successfully for years: ${newYears.join(", ")}`,
+      message: `Department assigned successfully for years: ${newYears.join(
+        ", "
+      )}`,
       success: true,
     });
   } catch (err) {
@@ -110,9 +116,12 @@ const getDepartmentAssignments = async (req, res) => {
           _id: 1,
           years: "$departmentYears",
           department: 1,
-          hodName: { $concat: ["$hodInfo.firstName", " ", "$hodInfo.lastName"] },
+          hodName: {
+            $concat: ["$hodInfo.firstName", " ", "$hodInfo.lastName"],
+          },
           assignedDate: "$createdAt",
           hodEmail: "$hodInfo.email",
+          createdAt: "$hodInfo.createdAt",
         },
       },
     ]);
@@ -200,7 +209,10 @@ const updateAssignment = async (req, res) => {
       });
     }
 
-    if (assignment.department === department && assignment.departmentYears.includes(year)) {
+    if (
+      assignment.department === department &&
+      assignment.departmentYears.includes(year)
+    ) {
       return res.status(400).json({
         message: "This year is already assigned in this assignment",
         success: false,
@@ -216,11 +228,12 @@ const updateAssignment = async (req, res) => {
 
     if (duplicate) {
       return res.status(400).json({
-        message: "A different assignment already exists for this department and year",
+        message:
+          "A different assignment already exists for this department and year",
         success: false,
       });
     }
-    
+
     assignment.department = department;
     assignment.departmentYears.push(year);
     await assignment.save();

@@ -1,6 +1,11 @@
 const express = require("express");
 const ensureAuthenticated = require("../Middlewares/Authentication");
-const { getClassDetails, newClass } = require("../Controllers/ClassController");
+const { 
+  getClassDetails, 
+  newClass, 
+  getClassesByDepartment, 
+  getClassSubjects 
+} = require("../Controllers/ClassController");
 const {
   getClassValidation,
   newClassValidation,
@@ -8,14 +13,26 @@ const {
 const ClassRouter = express.Router();
 
 ClassRouter.get(
-  "/classDetails",
-  ensureAuthenticated(["ADMIN", "HOD", "FACULTY"]),
+  "/details",
+  ensureAuthenticated(["ADMIN", "HOD", "FACULTY", "STUDENT"]),
   getClassValidation,
   getClassDetails
 );
 
+ClassRouter.get(
+  "/by-department",
+  ensureAuthenticated(["ADMIN", "HOD", "FACULTY"]),
+  getClassesByDepartment
+);
+
+ClassRouter.get(
+  "/:classId/subjects",
+  ensureAuthenticated(["ADMIN", "HOD", "FACULTY", "STUDENT"]),
+  getClassSubjects
+);
+
 ClassRouter.post(
-  "/newClass",
+  "/new",
   ensureAuthenticated(["ADMIN", "HOD"]),
   newClassValidation,
   newClass

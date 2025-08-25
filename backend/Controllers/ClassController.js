@@ -1,28 +1,37 @@
 const { default: mongoose } = require("mongoose");
 const classInfo = require("../Models/Class");
 const { User } = require("../Models/User.js");
+const Curriculum = require("../Models/Curriculum.js");
+const AssignedSubject = require("../Models/AssignedSubjects.js");
+
 /**
  * function for getting class details for a specific batch , department and year
- * it returns class details along the all subject and students for this class.
+ * it returns class details along with curriculum subjects and students for this class.
  */
 const getClassDetails = async (req, res) => {
-  const { batch, department, section } = req.query;
+  const { batch, department, section, year, semester } = req.query;
 
   try {
+    const classQuery = {};
+    if (batch) classQuery.batch = batch;
+    if (department) classQuery.department = department;
+    if (section) classQuery.section = section;
+    if (year) classQuery.year = year;
+    if (semester) classQuery.semester = semester;
+
     const classDetails = await classInfo
-      .findOne({
-        batch: batch,
-        department: department,
-        section: section,
-      })
+      .findOne(classQuery)
       .select("-__v")
       .populate({
-        path: "subjects.subject",
-        select: "name code",
+        path: "curriculum",
+        populate: {
+          path: "subjectsBySemester",
+          model: "Subject"
+        }
       })
       .populate({
-        path: "students.student",
-        select: "firstName lastName",
+        path: "students",
+        select: "firstName lastName email aparId",
       });
 
     if (!classDetails) {
@@ -32,10 +41,24 @@ const getClassDetails = async (req, res) => {
       });
     }
 
+    // Get subject assignments for this class
+    const subjectAssignments = await AssignedSubject.find({
+      class: classDetails._id
+    }).populate({
+      path: "subject",
+      select: "name code"
+    }).populate({
+      path: "faculty",
+      select: "firstName lastName email"
+    });
+
     return res.status(200).json({
       success: true,
       message: "Class Details fetched successfully",
-      classDetails: classDetails,
+      classDetails: {
+        ...classDetails.toObject(),
+        subjectAssignments
+      },
     });
   } catch (err) {
     console.log(err);
@@ -52,12 +75,14 @@ const getClassDetails = async (req, res) => {
  * returns a new created class for the details entered
  */
 const newClass = async (req, res) => {
-  const { department, year, batch, section } = req.body;
+  const { department, year, batch, section, semester } = req.body;
   try {
     const existingClass = await classInfo.findOne({
       batch: batch,
       department: department,
       section: section,
+      year: year,
+      semester: semester,
     });
 
     if (existingClass) {
@@ -67,11 +92,23 @@ const newClass = async (req, res) => {
       });
     }
 
+    // Find or create curriculum for the department
+    let curriculum = await Curriculum.findOne({ department });
+    if (!curriculum) {
+      curriculum = new Curriculum({
+        department,
+        subjectsBySemester: new Map()
+      });
+      await curriculum.save();
+    }
+
     const newClass = new classInfo({
       department: department,
       batch: batch,
       year: year,
       section: section,
+      semester: semester,
+      curriculum: curriculum._id,
     });
 
     await newClass.save();
@@ -84,6 +121,8 @@ const newClass = async (req, res) => {
         batch: batch,
         year: year,
         section: section,
+        semester: semester,
+        curriculum: curriculum._id,
       },
     });
   } catch (err) {
@@ -94,106 +133,83 @@ const newClass = async (req, res) => {
     });
   }
 };
-/*
-const bulkCreateClasses = async (req, res) => {
-  const { classes } = req.body; 
-  if (!Array.isArray(classes)) {
-    return res.status(400).json({
+
+/**
+ * Get all classes for a department
+ */
+const getClassesByDepartment = async (req, res) => {
+  const { department } = req.query;
+
+  try {
+    const classes = await classInfo
+      .find({ department })
+      .select("-__v")
+      .populate({
+        path: "curriculum",
+        select: "version"
+      })
+      .populate({
+        path: "students",
+        select: "firstName lastName",
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "Classes fetched successfully",
+      classes,
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
       success: false,
-      message: "Request body must be an array of class objects",
+      message: "Internal Server Error while fetching classes",
     });
   }
-
-  const results = [];
-  const errors = [];
-
-  for (const classData of classes) {
-    const { department, year, batch, section } = classData;
-    try {
-      const exists = await classInfo.findOne({
-        department,
-        year,
-        batch,
-        section,
-      });
-      if (exists) {
-        errors.push({
-          class: classData,
-          error: "Class with same details already exists",
-        });
-        continue;
-      }
-      const newClass = new classInfo({ department, year, batch, section });
-      await newClass.save();
-      results.push(newClass);
-    } catch (err) {
-      errors.push({
-        class: classData,
-        error: err.message,
-      });
-    }
-  }
-
-  return res.status(201).json({
-    success: true,
-    message: "Bulk class creation completed",
-    created: results,
-    errors: errors,
-  });
 };
 
-*/
+/**
+ * Get subjects for a specific class semester
+ */
+const getClassSubjects = async (req, res) => {
+  const { classId } = req.params;
 
-// const addStudent = async (req, res) => {
-//   const { department, section, year, studentId, batch } = req.body;
-//   try {
-//     const studentExists = await User.findOne({
-//       _id: studentId,
-//       role: "STUDENT",
-//     }).lean();
-//     if (!studentExists) {
-//       return res.status(404).json({
-//         message: "Student doesn't exists",
-//         success: false,
-//       });
-//     }
+  try {
+    const classDoc = await classInfo.findById(classId).populate({
+      path: "curriculum",
+      populate: {
+        path: "subjectsBySemester",
+        model: "Subject"
+      }
+    });
 
-//     const correspondingClass = await classInfo.findOne({
-//       department,
-//       section,
-//       year,
-//       batch,
-//     });
-//     if (!correspondingClass) {
-//       return res
-//         .status(404)
-//         .json({ message: "Class doesn't Exist", success: false });
-//     }
-//     const alreadyExists = correspondingClass.students.some(
-//       (student) => student.student && student.student.toString() === studentId
-//     );
-//     if (alreadyExists) {
-//       return res.status(409).json({
-//         message: "Student already exists",
-//         success: false,
-//       });
-//     }
-//     correspondingClass.students.push({ student: studentId });
-//     await correspondingClass.save();
-//     return res.status(201).json({
-//       message: "Student added successfully",
-//       success: true,
-//     });
-//   } catch (err) {
-//     console.log(err);
-//     return res.status(500).json({
-//       message: "Internal Server Occurred",
-//       success: false,
-//     });
-//   }
-// };
+    if (!classDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Class not found",
+      });
+    }
+
+    const semesterKey = classDoc.semester.toString();
+    const subjects = classDoc.curriculum.subjectsBySemester.get(semesterKey) || [];
+
+    return res.status(200).json({
+      success: true,
+      message: "Subjects fetched successfully",
+      subjects,
+      semester: classDoc.semester,
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error while fetching subjects",
+    });
+  }
+};
 
 module.exports = {
   getClassDetails,
   newClass,
+  getClassesByDepartment,
+  getClassSubjects,
 };

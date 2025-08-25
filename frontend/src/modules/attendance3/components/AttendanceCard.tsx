@@ -1,23 +1,28 @@
-import React from "react";
+import React from 'react';
 
 interface AttendanceCardProps {
-  subjectName: string;
+  subject: {
+    _id: string;
+    name: string;
+    code: string;
+  };
   percentage: number;
 }
 
-const getColor = (percentage: number) => {
-  if (percentage >= 90) return "bg-green-100 text-green-800 border-green-400";
-  if (percentage >= 75) return "bg-orange-100 text-orange-800 border-orange-400";
-  return "bg-red-100 text-red-800 border-red-400";
-};
-
-const AttendanceCard: React.FC<AttendanceCardProps> = ({ subjectName, percentage }) => {
-  const colorClass = getColor(percentage);
+const AttendanceCard: React.FC<AttendanceCardProps> = ({ subject, percentage }) => {
+  const getColorClass = (percentage: number) => {
+    if (percentage >= 90) return 'text-green-600';
+    if (percentage >= 75) return 'text-yellow-600';
+    return 'text-red-600';
+  };
 
   return (
-    <div className={`border rounded-lg p-4 shadow ${colorClass}`}>
-      <div className="font-semibold text-lg mb-2">{subjectName}</div>
-      <div className="text-3xl font-bold">{percentage.toFixed(1)}%</div>
+    <div className="bg-white p-4 rounded-lg shadow-md border">
+      <div className="font-semibold text-lg mb-2">{subject.name}</div>
+      <div className={`text-2xl font-bold ${getColorClass(percentage)}`}>
+        {percentage.toFixed(1)}%
+      </div>
+      <div className="text-sm text-gray-600 mt-1">Attendance</div>
     </div>
   );
 };

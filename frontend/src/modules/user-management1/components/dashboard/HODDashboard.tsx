@@ -229,23 +229,21 @@ const HODDashboard = ({ isHOD = true }) => {
   const fetchAssignments = async () => {
     try {
       setLoadingAssignments(true);
-      const response = await apiClient.get(
-        "/userData/assignedSubjectsAndFaculties"
-      );
+      const response = await apiClient.get("/subjects/assignments");
       if (response.data.success) {
-        setAssignments(response.data.assignedSubjects);
+        setAssignments(response.data.assignments);
       } else {
         toast({
-          title: "Hey check this !!",
+          title: "Error",
           description: response.data.message,
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching assignments:", error);
       toast({
         title: "Failed to fetch assignments",
-        description: error.response.data.message,
+        description: error.response?.data?.message || "An error occurred",
         variant: "destructive",
       });
     } finally {
@@ -1023,24 +1021,48 @@ const HODDashboard = ({ isHOD = true }) => {
   // Fetch subjects after year & semester are selected and subject field is focused
   const handleSubjectFocus = async () => {
     if (selectedYear && selectedSemester) {
-      const res = await apiClient.get(
-        `/subjectData/subjects?department=${department}&year=${Number(
-          selectedAssignmentYear
-        )}&semester=${Number(selectedSemester)}`
-      );
-      setSubjects(res.data.subjects);
+      try {
+        const res = await apiClient.get("/subjects/by-criteria", {
+          params: {
+            department: department,
+            year: Number(selectedAssignmentYear),
+            semester: Number(selectedSemester)
+          }
+        });
+        if (res.data.success) {
+          setSubjects(res.data.subjects);
+        }
+      } catch (error: any) {
+        console.error("Failed to fetch subjects:", error);
+        toast({
+          title: "Error",
+          description: error.response?.data?.message || "Failed to fetch subjects",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const handleEditAssignmentSubjectFocus = async () => {
     if (editAssignmentModal.assignment && subjects.length === 0) {
       try {
-        const res = await apiClient.get(
-          `/subjectData/subjects?department=${department}&year=${editAssignmentModal.assignment.year}&semester=${editAssignmentModal.assignment.semester}`
-        );
-        setSubjects(res.data.subjects);
-      } catch (error) {
+        const res = await apiClient.get("/subjects/by-criteria", {
+          params: {
+            department: department,
+            year: editAssignmentModal.assignment.year,
+            semester: editAssignmentModal.assignment.semester
+          }
+        });
+        if (res.data.success) {
+          setSubjects(res.data.subjects);
+        }
+      } catch (error: any) {
         console.error("Failed to fetch subjects for assignment edit:", error);
+        toast({
+          title: "Error",
+          description: error.response?.data?.message || "Failed to fetch subjects",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -1048,22 +1070,33 @@ const HODDashboard = ({ isHOD = true }) => {
   // Assign subject to faculty
   const handleAssign = async () => {
     try {
-      const res = await apiClient.post("/subjectData/assignments/add", {
+      const res = await apiClient.post("/subjects/assign", {
         subjectId: selectedSubject,
         facultyId: selectedFaculty,
+        department: department,
+        year: Number(selectedAssignmentYear),
+        semester: Number(selectedSemester),
         section: Number(selectedSection),
       });
 
       if (res.data.success) {
-        toast({ title: "Subject assigned successfully", variant: "default" });
+        toast({ 
+          title: "Success", 
+          description: "Subject assigned successfully", 
+          variant: "default" 
+        });
         fetchAssignments();
+        setSelectedSubject("");
+        setSelectedFaculty("");
+        setSelectedSection("");
       } else {
         toast({
-          title: res.data.message || "Assignment failed",
+          title: "Error",
+          description: res.data.message || "Assignment failed",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Assignment failed",
         description:
@@ -1102,11 +1135,13 @@ const HODDashboard = ({ isHOD = true }) => {
 
   const handleNewSubject = async (e: React.FormEvent) => {
     e.preventDefault();
-    const response = await apiClient.post("/subjectData/addSubject", {
-      code: newSubjectCode,
-      year: newSubjectYear,
-      semester: newSubjectSemester,
-      name: newSubjectName,
+    try {
+      const response = await apiClient.post("/subjects/add", {
+        code: newSubjectCode,
+        semester: Number(newSubjectSemester),
+        name: newSubjectName,
+        department: department
+      });
       department: department,
     });
     toast({ title: response.data.message, variant: "default" });

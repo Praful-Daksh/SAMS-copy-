@@ -1,7 +1,8 @@
 const { User } = require("../Models/User.js");
 const Subject = require("../Models/Subject.js");
 const departmentAssignment = require("../Models/AssignedDepartments.js");
-const AssignedSubject = require("../Models/AssignedSubjects.js"); // Add this at the top
+const AssignedSubject = require("../Models/AssignedSubjects.js");
+const Class = require("../Models/Class.js");
 
 const checkAccess = async (req, res, next) => {
   const userId = req.user.id;
@@ -14,7 +15,7 @@ const checkAccess = async (req, res, next) => {
         success: false,
       });
     }
-    if (user.role == "ADMIN") {
+    if (user.role === "ADMIN") {
       return next();
     }
 
@@ -30,11 +31,12 @@ const checkAccess = async (req, res, next) => {
     }
 
     const { department, departmentYears } = assignedDepartmentsAndYear;
-    let year, reqDepartment;
+    let year, reqDepartment, semester;
 
     if (req.body.department && req.body.year) {
       reqDepartment = req.body.department;
       year = req.body.year;
+      semester = req.body.semester;
     } else if (req.body.subjectId) {
       const subject = await Subject.findOne({ _id: req.body.subjectId });
       if (!subject) {
@@ -44,9 +46,7 @@ const checkAccess = async (req, res, next) => {
         });
       }
       reqDepartment = subject.department;
-      year = subject.year;
     } else if (req.params.assignmentId) {
-      // New logic for assignment update
       const assignment = await AssignedSubject.findById(
         req.params.assignmentId
       ).lean();
@@ -64,7 +64,17 @@ const checkAccess = async (req, res, next) => {
         });
       }
       reqDepartment = subject.department;
-      year = subject.year;
+    } else if (req.body.classId) {
+      const classDoc = await Class.findById(req.body.classId).lean();
+      if (!classDoc) {
+        return res.status(404).json({
+          message: "Class not found",
+          success: false,
+        });
+      }
+      reqDepartment = classDoc.department;
+      year = classDoc.year;
+      semester = classDoc.semester;
     } else {
       return res.status(400).json({
         message: "Insufficient data to validate access.",
@@ -79,7 +89,7 @@ const checkAccess = async (req, res, next) => {
       });
     }
 
-    if (!departmentYears.includes(parseInt(year))) {
+    if (year && !departmentYears.includes(parseInt(year))) {
       return res.status(403).json({
         message:
           "You are not authorized to make changes in this department/year",

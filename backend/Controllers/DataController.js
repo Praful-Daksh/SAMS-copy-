@@ -4,6 +4,8 @@ const TimeTable = require("../Models/TimeTable");
 const departmentAssignment = require("../Models/AssignedDepartments");
 const { default: mongoose } = require("mongoose");
 const PendingUser = require("../Models/PendingUsers");
+const AssignedSubject = require("../Models/AssignedSubjects.js");
+const Curriculum = require("../Models/Curriculum.js");
 
 /**
  * function to get students by the department ,year, semester and section
@@ -175,58 +177,53 @@ const createTimeTable = async (req, res) => {
  * return subject to corresponding class
  */
 const checkTimetableExists = async (req, res) => {
-  const { department, year, section } = req.query;
+  const { department, year, section, batch, semester } = req.query;
   try {
+    const classQuery = {};
+    if (department) classQuery.department = department;
+    if (year) classQuery.year = year;
+    if (section) classQuery.section = section;
+    if (batch) classQuery.batch = batch;
+    if (semester) classQuery.semester = semester;
+
     const classDoc = await classInfo
-      .findOne({ department, year, section })
+      .findOne(classQuery)
       .sort({ batch: -1 })
       .limit(1)
       .select("_id")
       .lean();
+      
     if (!classDoc) {
       return res
         .status(200)
         .json({ exists: false, message: "Class not found" });
     }
-    const subjectsInfo = await classInfo.aggregate([
+
+    // Get subjects from curriculum and their assignments
+    const subjectsInfo = await AssignedSubject.aggregate([
       {
         $match: {
-          _id: classDoc._id,
+          class: classDoc._id,
         },
       },
       {
         $lookup: {
           from: "subjects",
-          localField: "subjects.subject",
+          localField: "subject",
           foreignField: "_id",
-          as: "subjects_info",
+          as: "subject_info",
         },
       },
       {
         $unwind: {
-          path: "$subjects_info",
+          path: "$subject_info",
           preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $match: {
-          subjects_info: {
-            $ne: null,
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: "assignedsubjects",
-          localField: "subjects_info._id",
-          foreignField: "subject",
-          as: "subject_faculty",
         },
       },
       {
         $lookup: {
           from: "users",
-          localField: "subject_faculty.faculty",
+          localField: "faculty",
           foreignField: "_id",
           as: "facultyInfo",
         },
@@ -263,17 +260,20 @@ const checkTimetableExists = async (req, res) => {
             ],
           },
           faculty_id: "$facultyInfo._id",
-          subject_name: "$subjects_info.name",
-          subject_id: "$subjects_info._id",
+          subject_name: "$subject_info.name",
+          subject_id: "$subject_info._id",
+          section: "$section",
         },
       },
     ]);
+
     if (!subjectsInfo || subjectsInfo.length === 0) {
       return res.status(200).json({
         exists: false,
         message: "No subjects found for this class",
       });
     }
+
     const timetable = await TimeTable.findOne({ class: classDoc._id })
       .select("-_id")
       .lean();
@@ -298,7 +298,6 @@ const checkTimetableExists = async (req, res) => {
  * function to get faculties and currently assigned subjects
  * return faculty name , subject assigned ,year , semester , section, assignment date
  */
-
 const getAssignedSubjectsAndFaculties = async (req, res) => {
   const user = req.user;
 
@@ -336,38 +335,40 @@ const getAssignedSubjectsAndFaculties = async (req, res) => {
       department = assignedDepartment.department;
       years = assignedDepartment.departmentYears;
     }
-    const result = await classInfo.aggregate([
+
+    // Get all classes for the department and years
+    const classes = await classInfo.find({
+      department: department,
+      year: { $in: years },
+    }).select("_id year semester section batch");
+
+    const classIds = classes.map(cls => cls._id);
+
+    // Get assignments for these classes
+    const result = await AssignedSubject.aggregate([
       {
         $match: {
-          department: department,
-          year: { $in: years },
+          class: { $in: classIds },
         },
-      },
-      {
-        $unwind: "$subjects",
       },
       {
         $lookup: {
-          from: "assignedsubjects",
-          localField: "subjects.subject",
-          foreignField: "subject",
-          as: "assigned",
+          from: "classes",
+          localField: "class",
+          foreignField: "_id",
+          as: "class_info",
         },
       },
       {
-        $unwind: "$assigned",
-      },
-      {
-        $match: {
-          $expr: {
-            $eq: ["$assigned.section", "$section"],
-          },
+        $unwind: {
+          path: "$class_info",
+          preserveNullAndEmptyArrays: true,
         },
       },
       {
         $lookup: {
           from: "users",
-          localField: "assigned.faculty",
+          localField: "faculty",
           foreignField: "_id",
           as: "faculty",
         },
@@ -381,7 +382,7 @@ const getAssignedSubjectsAndFaculties = async (req, res) => {
       {
         $lookup: {
           from: "subjects",
-          localField: "subjects.subject",
+          localField: "subject",
           foreignField: "_id",
           as: "subject_details",
         },
@@ -395,35 +396,30 @@ const getAssignedSubjectsAndFaculties = async (req, res) => {
       {
         $project: {
           _id: 0,
-          assignmentId: "$assigned._id",
+          assignmentId: "$_id",
           faculty_name: {
             $concat: ["$faculty.firstName", " ", "$faculty.lastName"],
           },
-          subject_id: "$subjects._id",
+          faculty_id: "$faculty._id",
           subject_name: "$subject_details.name",
-          semester: "$subject_details.semester",
-          year: "$year",
-          department: "$department",
+          subject_code: "$subject_details.code",
+          year: "$class_info.year",
+          semester: "$class_info.semester",
           section: "$section",
-          assignment_date: "$assigned.createdAt",
+          batch: "$class_info.batch",
+          assigned_date: "$createdAt",
         },
       },
     ]);
 
-    if (result.length === 0) {
-      return res.status(404).json({
-        message: "No assigned subjects found for the given criteria",
-        success: false,
-      });
-    }
-    res.status(200).json({
+    return res.status(200).json({
       message: "Assigned subjects and faculties fetched successfully",
-      assignedSubjects: result,
+      assignments: result,
       success: true,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Internal server error",
       success: false,
     });

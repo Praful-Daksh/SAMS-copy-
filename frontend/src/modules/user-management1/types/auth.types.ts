@@ -7,7 +7,6 @@ export type UserProfile =
   | HODProfile
   | GuestProfile;
 
-
 export interface BaseUserProfile {
   id: string;
   firstName: string;
@@ -24,64 +23,41 @@ export interface BaseUserProfile {
 }
 
 export interface StudentProfile extends BaseUserProfile {
-  rollNumber: string;
+  aparId: string;
+  admission_academic_year: string;
+  year: number;
   dateOfBirth: string;
-  gender?: 'MALE' | 'FEMALE' | 'OTHER';
-  personalEmail?: string;
-  parentName?: string;
-  parentPhone?: string;
-  parentPhoneNumber?: string;
-  currentSemester?: number;
-  branch?: string;
-  courseProgram?: string;
-  section?: string;
-  studentStatus?: 'ACTIVE' | 'INACTIVE' | 'DROPOUT' | 'GRADUATED';
-  feeStatus?: 'PAID' | 'PENDING' | 'OVERDUE' | 'EXEMPTED';
-  enrollmentYear?: number;
-  current_academic_year?: string;
-  currentAddress?: string;
-  permanentAddress?: string;
-  aparId?: string;
-  admission_academic_year?: string;
-  year?: string;
-  semester?: string;
-  department?: string;
-  transport?: string;
+  semester: number;
+  department: string;
+  section: number;
+  transport: string;
   busRoute?: string;
-  address?: string;
+  address: string;
+  parentPhoneNumber: string;
+  batch: string;
 }
 
 export interface FacultyProfile extends BaseUserProfile {
-  employeeId: string;
-  designation: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
   department: string;
-  dateOfJoining: string;
-  employmentType: 'PERMANENT' | 'CONTRACT' | 'VISITING';
-  officialEmail: string;
-  highestQualification?: string;
-  specialization?: string;
-  yearsOfExperience: number;
 }
 
 export interface AdminProfile extends BaseUserProfile {
-  adminId: string;
-  employeeId?: string;
-  designation?: string;
-  department?: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface HODProfile extends BaseUserProfile {
-  facultyId: string;
-  department: string;
-  appointmentDate: string;
-  tenureEndDate?: string;
-  faculty: FacultyProfile;
+  firstName: string;
+  lastName: string;
 }
 
 export interface GuestProfile extends BaseUserProfile {
-  affiliation?: string; 
+  firstName: string;
+  lastName: string;
 }
-
 
 export interface LoginCredentials {
   email: string;

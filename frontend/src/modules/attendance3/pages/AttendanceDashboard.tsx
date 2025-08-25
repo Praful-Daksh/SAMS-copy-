@@ -1,77 +1,107 @@
-import React, { useEffect } from "react";
-import { useAttendanceStore } from "../store/attendance.store";
-import { SubjectAttendance } from "../types/attendance.types";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/common/components/ui/card';
+import { Button } from '@/common/components/ui/button';
+import { useAuthStore } from '@/modules/user-management1/store/authStore';
+import AttendanceCard from '../components/AttendanceCard';
+import AnalyticsCharts from '../components/AnalyticsCharts';
+import { dashboardService } from '@/modules/user-management1/services/dashboard.service';
+import { Loader2 } from 'lucide-react';
 
-export const AttendanceDashboard: React.FC = () => {
-  const [subjects, setSubjects] = React.useState<SubjectAttendance[]>([]);
-  const { records, selectedSubjectId, selectedDate, fetchAttendance } = useAttendanceStore();
+interface SubjectAttendance {
+  subject: {
+    _id: string;
+    name: string;
+    code: string;
+  };
+  attendance: {
+    totalClasses: number;
+    attendedClasses: number;
+    percentage: number;
+  };
+}
 
-  // Mock: Fetch subject attendance summary (replace with real API/service)
+const AttendanceDashboard: React.FC = () => {
+  const { user } = useAuthStore();
+  const [attendanceData, setAttendanceData] = useState<SubjectAttendance[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    // Replace with real API call if available
-    async function fetchSummary() {
-      // Example mock data
-      const mock: SubjectAttendance[] = [
-        {
-          subjectId: "MATH101",
-          subjectName: "Mathematics",
-          totalClasses: 40,
-          attendedClasses: 30,
-          attendancePercentage: 75,
-        },
-        {
-          subjectId: "PHY101",
-          subjectName: "Physics",
-          totalClasses: 38,
-          attendedClasses: 25,
-          attendancePercentage: 65.8,
-        },
-        {
-          subjectId: "CHEM101",
-          subjectName: "Chemistry",
-          totalClasses: 42,
-          attendedClasses: 39,
-          attendancePercentage: 92.8,
-        },
-      ];
-      setSubjects(mock);
-    }
-    fetchSummary();
+    const fetchAttendanceData = async () => {
+      try {
+        setLoading(true);
+        const academicDetails = await dashboardService.getStudentAcademicDetails();
+        setAttendanceData(academicDetails.subjects || []);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch attendance data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAttendanceData();
   }, []);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading attendance data...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-red-600 text-center">{error}</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const chartData = attendanceData.map(item => ({
+    subject: item.subject,
+    percentage: item.attendance.percentage
+  }));
+
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Attendance Dashboard</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {subjects.map((subject) => (
-          <div
-            key={subject.subjectId}
-            className="bg-white rounded-lg shadow p-5 flex flex-col items-start relative"
-          >
-            <div className="flex items-center w-full">
-              <span className="font-semibold text-lg">{subject.subjectName}</span>
-              {subject.attendancePercentage < 75 && (
-                <ExclamationTriangleIcon
-                  className="w-6 h-6 text-yellow-500 ml-2"
-                  title="Attendance below 75%"
-                />
-              )}
-            </div>
-            <div className="mt-2 text-gray-600 text-sm">
-              <div>
-                <span className="font-medium">Total Classes:</span> {subject.totalClasses}
-              </div>
-              <div>
-                <span className="font-medium">Attended:</span> {subject.attendedClasses}
-              </div>
-            </div>
-            <div className="mt-4 text-3xl font-bold text-blue-600">
-              {subject.attendancePercentage.toFixed(1)}%
-            </div>
-          </div>
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Attendance Dashboard</h1>
+        <Button onClick={() => window.history.back()}>Back</Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {attendanceData.map((item) => (
+          <AttendanceCard
+            key={item.subject._id}
+            subject={item.subject}
+            percentage={item.attendance.percentage}
+          />
         ))}
       </div>
+
+      {attendanceData.length > 0 && (
+        <AnalyticsCharts data={chartData} />
+      )}
+
+      {attendanceData.length === 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-gray-500">
+              No attendance data available
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
+
+export default AttendanceDashboard;

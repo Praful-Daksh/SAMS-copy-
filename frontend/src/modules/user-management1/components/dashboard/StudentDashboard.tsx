@@ -634,31 +634,39 @@ const CircularProgress = ({ percent }: { percent: number }) => {
 
 // Define types for backend data
 interface FacultyInfo {
-  facultyName: string;
-  email: string;
+  _id: string;
+  name: string;
 }
+
 interface SubjectInfo {
-  subjectName: string;
-  subjectCode: string;
+  _id: string;
+  name: string;
+  code: string;
 }
+
 interface AttendanceInfo {
   totalClasses: number;
-  totalAttended: number;
+  attendedClasses: number;
+  percentage: number;
 }
-interface AttendanceAndFacultyInfo {
+
+interface SubjectData {
   subject: SubjectInfo;
   faculty: FacultyInfo | null;
   attendance: AttendanceInfo;
 }
+
 interface DashboardData {
-  timeTable: {
-    day: string;
-    startTime: string;
-    endTime: string;
-    subject: string;
-    faculty: string;
-  }[];
-  attendanceAndFacultyInfo: AttendanceAndFacultyInfo[];
+  schedule: {
+    timeSlots: Array<{
+      day: string;
+      startTime: string;
+      endTime: string;
+      subject: string;
+      faculty: string;
+    }>;
+  };
+  subjects: SubjectData[];
 }
 
 const StudentDashboard = () => {
@@ -741,7 +749,7 @@ const StudentDashboard = () => {
   const [error, setError] = useState<string | null>(null);
 
   // For timetable:
-  const timetableSlots = academicDetails?.timeTable || [];
+  const timetableSlots = academicDetails?.schedule?.timeSlots || [];
   const allDays = [
     "Monday",
     "Tuesday",
@@ -784,15 +792,15 @@ const StudentDashboard = () => {
   });
   // For subjects faculty and attendance:
   const subjectsFaculty =
-    academicDetails?.attendanceAndFacultyInfo?.map((item) => ({
-      subjectName: item.subject.subjectName,
-      faculty: item.faculty?.facultyName || "N/A",
+    academicDetails?.subjects?.map((item) => ({
+      subjectName: item.subject.name,
+      faculty: item.faculty?.name || "N/A",
       book: "-", // No book info from backend
     })) || [];
   const attendanceData =
-    academicDetails?.attendanceAndFacultyInfo?.map((item) => ({
-      label: item.subject.subjectName,
-      attended: item.attendance.totalAttended,
+    academicDetails?.subjects?.map((item) => ({
+      label: item.subject.name,
+      attended: item.attendance.attendedClasses,
       total: item.attendance.totalClasses,
     })) || [];
 
@@ -842,7 +850,9 @@ const StudentDashboard = () => {
         const res = await apiClient.get("/dashboard/student");
         if (res.data && res.data.success) {
           const newToken = res.headers["refreshedtoken"];
-          localStorage.setItem("authToken", newToken);
+          if (newToken) {
+            localStorage.setItem("authToken", newToken);
+          }
           setDashboardLoaded(true);
         }
       } catch (err: unknown) {
@@ -878,7 +888,7 @@ const StudentDashboard = () => {
     if (!dashboardLoaded) return;
     const fetchAcademicDetails = async () => {
       try {
-        const res = await apiClient.get(`/userData/student/academicDetails`);
+        const res = await apiClient.get(`/dashboard/student-academic-details`);
         if (res.data && res.data.success) {
           setAcademicDetails(res.data.data);
         } else {
@@ -898,10 +908,10 @@ const StudentDashboard = () => {
           setError(
             errorObj.response?.data?.message ||
               errorObj.message ||
-              "Failed to fetch dashboard data"
+              "Failed to fetch academic details"
           );
         } else {
-          setError("Failed to fetch dashboard data");
+          setError("Failed to fetch academic details");
         }
       } finally {
         setAcademicDetailsLoading(false);

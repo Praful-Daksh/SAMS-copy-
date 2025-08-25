@@ -7,14 +7,40 @@ export enum AttendanceTrendDirection {
   STABLE = "STABLE",
 }
 
-/**
- * Analytics for a subject's attendance.
- */
-export interface SubjectAttendanceAnalytics {
-  subjectName: string;
-  attendancePercentage: number;
-  trend: AttendanceTrendDirection;
+export interface AttendanceAnalytics {
   totalClasses: number;
+  totalStudents: number;
+  averageAttendance: number;
+  subjectBreakdown: SubjectAttendance[];
+  dailyTrends: DailyAttendance[];
+  monthlyTrends: MonthlyAttendance[];
+}
+
+export interface SubjectAttendance {
+  subjectId: string;
+  subject: {
+    _id: string;
+    name: string;
+    code: string;
+  };
+  totalClasses: number;
+  attendedClasses: number;
+  attendancePercentage: number;
+}
+
+export interface DailyAttendance {
+  date: string;
+  presentCount: number;
+  absentCount: number;
+  totalStudents: number;
+  attendancePercentage: number;
+}
+
+export interface MonthlyAttendance {
+  month: string;
+  averageAttendance: number;
+  totalClasses: number;
+  totalStudents: number;
 }
 
 /**

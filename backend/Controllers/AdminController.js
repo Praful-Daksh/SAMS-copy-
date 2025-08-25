@@ -9,13 +9,14 @@ const {
 } = require("../Models/User.js");
 const PendingUser = require("../Models/PendingUsers.js");
 const Class = require("../Models/Class.js");
+const Curriculum = require("../Models/Curriculum.js");
 
 /**
  * function for approve request of user for registration
  */
 const approveUser = async (req, res) => {
   try {
-    const  updatedUser = req.body;
+    const updatedUser = req.body;
     const pending = await PendingUser.findById(updatedUser._id);
     if (!pending) {
       return res
@@ -43,23 +44,32 @@ const approveUser = async (req, res) => {
     let classDoc = null;
 
     if (pending.role === "STUDENT") {
-      const { department, year, section, admissionAcademicYear, lateralEntry } =
+      const { department, year, section, admission_academic_year, lateralEntry } =
         profileData;
-      const batch = lateralEntry
-        ? new Date(admissionAcademicYear).getFullYear() - 1
-        : new Date(admissionAcademicYear).getFullYear();
+      
+      // Calculate batch based on admission year
+      const admissionYear = new Date(admission_academic_year).getFullYear();
+      const batch = lateralEntry ? (admissionYear - 1).toString() : admissionYear.toString();
 
-      classDoc = await Class.findOne({ department, year, section, batch });
+      // Find the class for this student
+      classDoc = await Class.findOne({ 
+        department, 
+        year, 
+        section, 
+        batch,
+        semester: profileData.semester 
+      });
+      
       if (!classDoc) {
         return res.status(404).json({
-          message:
-            "No class found for the student's department/year/section/batch",
+          message: "No class found for the student's department/year/section/batch/semester",
           success: false,
         });
       }
 
+      // Update profile data with batch and class reference
       profileData.batch = batch;
-      profileData.class = classDoc._id;
+      profileData.admission_academic_year = new Date(admission_academic_year);
     }
 
     const newUser = new Model({

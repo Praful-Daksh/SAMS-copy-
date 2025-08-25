@@ -10,8 +10,7 @@ class AuthService {
       return { user, token };
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
-        // @ts-expect-error: error is narrowed but TS can't infer nested types
-        throw new Error(error.response.data?.message || 'Login failed. Please try again.');
+        throw new Error((error.response as any).data?.message || 'Login failed. Please try again.');
       }
       throw new Error('Login failed. Please try again.');
     }
@@ -24,8 +23,7 @@ class AuthService {
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
         console.error('Registration error:', error.response?.data || error);
-        // @ts-expect-error: error is narrowed but TS can't infer nested types
-        throw new Error(error.response?.data?.message || 'Registration failed. Please try again.');
+        throw new Error((error.response as any).data?.message || 'Registration failed. Please try again.');
       }
       console.error('Registration error:', error);
       throw new Error('Registration failed. Please try again.');
@@ -38,12 +36,10 @@ class AuthService {
   async updateProfile(profileData: Partial<StudentProfile | FacultyProfile | AdminProfile | HODProfile | GuestProfile>): Promise<BaseUserProfile> {
     try {
       const response = await apiClient.put('/auth/profile', profileData);
-      
       return response.data.user;
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
-        // @ts-expect-error: error is narrowed but TS can't infer nested types
-        throw new Error(error.response?.data?.message || 'Profile update failed. Please try again.');
+        throw new Error((error.response as any).data?.message || 'Profile update failed. Please try again.');
       }
       throw new Error('Profile update failed. Please try again.');
     }
@@ -63,8 +59,7 @@ class AuthService {
       return response.data.user;
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
-        // @ts-expect-error: error is narrowed but TS can't infer nested types
-        throw new Error(error.response?.data?.message || 'Profile photo update failed. Please try again.');
+        throw new Error((error.response as any).data?.message || 'Profile photo update failed. Please try again.');
       }
       throw new Error('Profile photo update failed. Please try again.');
     }
@@ -73,17 +68,14 @@ class AuthService {
   async deleteProfilePhoto(): Promise<BaseUserProfile> {
     try {
       const response = await apiClient.delete('/auth/profile-photo');
-
       return response.data.user;
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
-        // @ts-expect-error: error is narrowed but TS can't infer nested types
-        throw new Error(error.response?.data?.message || 'Profile photo update failed. Please try again.');
+        throw new Error((error.response as any).data?.message || 'Profile photo update failed. Please try again.');
       }
       throw new Error('Profile photo update failed. Please try again.');
     }
   }
-
 
   async getProfile(): Promise<BaseUserProfile> {
     try {
@@ -92,35 +84,41 @@ class AuthService {
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
         console.error('Failed to fetch profile:', error.response?.data || error);
-        // @ts-expect-error: error is narrowed but TS can't infer nested types
-        throw new Error(error.response?.data?.message || 'Session expired or invalid.');
+        throw new Error((error.response as any).data?.message || 'Session expired or invalid.');
       }
       console.error('Failed to fetch profile:', error);
       throw new Error('Session expired or invalid.');
     }
   }
 
-
-  async fetchUsersByRole(role: string, data : any): Promise<any[]> {
-    let endpoint = ''; 
-    if(role == "STUDENT"){
-      const response = await apiClient.get(`/userData/students?year=${data.year}&department=${data.department}&section=${data.section}&pending=${data.pending}`);
-      return response.data.students || [];
-    }
-    else if (role === 'FACULTY') {
-      endpoint = '/userData/faculties';
-    } else if (role === 'HOD') {
-      endpoint = '/department/hods';
-    } else {
-      endpoint = `/users?role=${role}`;
-    }
-    const response = await apiClient.get(endpoint);
-     if (role === 'FACULTY') {
-      return response.data.facultyNames || [];
-    } else if (role === 'HOD') {
-      return response.data.hods || [];
-    } else {
-      return response.data.users || [];
+  async fetchUsersByRole(role: string, data: any): Promise<any[]> {
+    try {
+      if(role === "STUDENT"){
+        const params = new URLSearchParams();
+        if (data.year) params.append('year', data.year.toString());
+        if (data.department) params.append('department', data.department);
+        if (data.section) params.append('section', data.section.toString());
+        if (data.semester) params.append('semester', data.semester.toString());
+        if (data.pending) params.append('pending', data.pending.toString());
+        
+        const response = await apiClient.get(`/userData/students?${params.toString()}`);
+        return response.data.students || [];
+      }
+      else if (role === 'FACULTY') {
+        const response = await apiClient.get('/userData/faculties');
+        return response.data.facultyNames || [];
+      } else if (role === 'HOD') {
+        const response = await apiClient.get('/department/hods');
+        return response.data.hods || [];
+      } else {
+        const response = await apiClient.get(`/users?role=${role}`);
+        return response.data.users || [];
+      }
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
+        throw new Error((error.response as any).data?.message || 'Failed to fetch users');
+      }
+      throw new Error('Failed to fetch users');
     }
   }
 }
