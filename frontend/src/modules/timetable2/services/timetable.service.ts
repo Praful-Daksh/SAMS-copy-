@@ -47,7 +47,7 @@ export type CreateTimetableEntryDto = Omit<TimetableEntry, 'id'>;
 
 export const createTimetableEntry = async (entryData: CreateTimetableData): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await apiClient.post('/userData/createTimetable', entryData);
+    const response = await apiClient.post('/userData/createTimeTable', entryData);
     return response.data;
   } catch (error) {
     console.error("Error creating timetable entry:", error);

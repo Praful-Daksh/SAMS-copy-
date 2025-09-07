@@ -229,7 +229,7 @@ const HODDashboard = ({ isHOD = true }) => {
   const fetchAssignments = async () => {
     try {
       setLoadingAssignments(true);
-      const response = await apiClient.get("/subjects/assignments");
+      const response = await apiClient.get("/subjectData/assignments");
       if (response.data.success) {
         setAssignments(response.data.assignments);
       } else {
@@ -289,8 +289,8 @@ const HODDashboard = ({ isHOD = true }) => {
           };
           setError(
             errorObj.response?.data?.message ||
-              errorObj.message ||
-              "Failed to fetch dashboard data"
+            errorObj.message ||
+            "Failed to fetch dashboard data"
           );
         } else {
           setError("Failed to fetch dashboard data");
@@ -979,9 +979,9 @@ const HODDashboard = ({ isHOD = true }) => {
       prev.map((act, i) =>
         i === idx
           ? {
-              ...act,
-              status: act.status === "pending" ? "completed" : "pending",
-            }
+            ...act,
+            status: act.status === "pending" ? "completed" : "pending",
+          }
           : act
       )
     );
@@ -1080,10 +1080,10 @@ const HODDashboard = ({ isHOD = true }) => {
       });
 
       if (res.data.success) {
-        toast({ 
-          title: "Success", 
-          description: "Subject assigned successfully", 
-          variant: "default" 
+        toast({
+          title: "Success",
+          description: "Subject assigned successfully",
+          variant: "default"
         });
         fetchAssignments();
         setSelectedSubject("");
@@ -1140,13 +1140,13 @@ const HODDashboard = ({ isHOD = true }) => {
         code: newSubjectCode,
         semester: Number(newSubjectSemester),
         name: newSubjectName,
-        department: department
-      });
-      department: department,
-    });
-    toast({ title: response.data.message, variant: "default" });
-  };
+        department: department,
+      })
 
+    } catch (err) {
+
+    };
+  }
   /**edit subject and subject assignments */
 
   const [editSubjectModal, setEditSubjectModal] = useState({
@@ -1230,8 +1230,8 @@ const HODDashboard = ({ isHOD = true }) => {
       const response = await apiClient.put(
         `/subjectData/assignments/update/${updatedAssignment.assignmentId}`,
         {
-         facultyId: updatedAssignment.facultyId,
-         subjectId: updatedAssignment.subjectId
+          facultyId: updatedAssignment.facultyId,
+          subjectId: updatedAssignment.subjectId
         }
       );
 
@@ -2007,66 +2007,70 @@ const HODDashboard = ({ isHOD = true }) => {
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {assignments.map((assignment) => (
-                          <tr
-                            key={assignment.assignmentId}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
-                              {assignment.faculty_name}
-                            </td>
-                            <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
-                              {assignment.subject_name}
-                            </td>
-                            <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
-                              {assignment.year}
-                            </td>
-                            <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
-                              {assignment.semester}
-                            </td>
-                            <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
-                              {assignment.section}
-                            </td>
-                            <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm">
-                              {assignment.isClassTeacher ? (
-                                <Badge className="bg-green-600 text-white text-xs">
-                                  Yes
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-gray-400 text-white text-xs">
-                                  No
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
-                              {assignment.assignment_date.split("T")[0]}
-                            </td>
-                            <td className="px-3 py-2 sm:px-4 sm:py-3 text-center">
-                              <div className="flex gap-2 justify-center">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    handleEditAssignment(assignment)
-                                  }
-                                  className="hover:bg-primary/10 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    deleteAssignment(assignment.assignmentId)
-                                  }
-                                  className="hover:bg-red-100 dark:hover:bg-red-900 border-red-300 dark:border-red-600 text-red-700 dark:text-red-200"
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                        {assignments.length > 0 ? (
+
+                          assignments.map((assignment) => (
+                            <tr
+                              key={assignment.assignmentId}
+                              className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
+                                {assignment.faculty_name}
+                              </td>
+                              <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
+                                {assignment.subject_name}
+                              </td>
+                              <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
+                                {assignment.year}
+                              </td>
+                              <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
+                                {assignment.semester}
+                              </td>
+                              <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
+                                {assignment.section}
+                              </td>
+                              <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm">
+                                {assignment.isClassTeacher ? (
+                                  <Badge className="bg-green-600 text-white text-xs">
+                                    Yes
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-gray-400 text-white text-xs">
+                                    No
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
+                                {assignment.assignment_date.split("T")[0]}
+                              </td>
+                              <td className="px-3 py-2 sm:px-4 sm:py-3 text-center">
+                                <div className="flex gap-2 justify-center">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      handleEditAssignment(assignment)
+                                    }
+                                    className="hover:bg-primary/10 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      deleteAssignment(assignment.assignmentId)
+                                    }
+                                    className="hover:bg-red-100 dark:hover:bg-red-900 border-red-300 dark:border-red-600 text-red-700 dark:text-red-200"
+                                  >
+                                    Delete
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))) : <tr className=" hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                          <td className="px-3 py-2 sm:px-4 sm:py-3 text-center" colSpan={8}>No subject Assignments</td>
+                        </tr>}
                       </tbody>
                     </Table>
                   )}

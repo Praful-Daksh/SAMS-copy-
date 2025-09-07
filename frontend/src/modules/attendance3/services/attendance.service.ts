@@ -16,7 +16,7 @@ export interface MarkAttendanceData {
 export const attendanceService = {
   async getAttendanceByDate(subjectId: string, date: string): Promise<AttendanceRecord[]> {
     try {
-      const response = await apiClient.get('/attendance/by-date', {
+      const response = await apiClient.get('/attendance/byDate', {
         params: { subjectId, date }
       });
       return response.data.attendance?.students || [];
@@ -41,7 +41,7 @@ export const attendanceService = {
 
   async getStudentAttendanceSummary(studentId: string, subjectId: string): Promise<SubjectAttendance> {
     try {
-      const response = await apiClient.get('/attendance/by-subject', {
+      const response = await apiClient.get('/attendance/attendancebySubject', {
         params: { studentId, subjectId }
       });
       const { totalClasses, totalAttended } = response.data;

@@ -48,11 +48,11 @@ const getSubjectsbyCriteria = async (req, res) => {
     if (section) classQuery.section = section;
 
     const classDoc = await Class.findOne(classQuery).populate({
-      path: 'curriculum',
+      path: "curriculum",
       populate: {
-        path: 'subjectsBySemester',
-        model: 'Subject'
-      }
+        path: "subjectsBySemester",
+        model: "Subject",
+      },
     });
 
     if (!classDoc || !classDoc.curriculum) {
@@ -64,8 +64,9 @@ const getSubjectsbyCriteria = async (req, res) => {
     }
 
     // Get subjects for the specific semester from curriculum
-    const semesterKey = semester ? semester.toString() : '1';
-    const subjects = classDoc.curriculum.subjectsBySemester.get(semesterKey) || [];
+    const semesterKey = semester ? semester.toString() : "1";
+    const subjects =
+      classDoc.curriculum.subjectsBySemester.get(semesterKey) || [];
 
     if (subjects.length === 0) {
       return res.status(200).json({
@@ -117,20 +118,20 @@ const addSubject = async (req, res) => {
 
     // Find or create curriculum for the department
     let curriculum = await Curriculum.findOne({ department });
-    
+
     if (!curriculum) {
       curriculum = new Curriculum({
         department,
-        subjectsBySemester: new Map()
+        subjectsBySemester: new Map(),
       });
     }
 
     // Add subject to the appropriate semester in curriculum
-    const semesterKey = semester ? semester.toString() : '1';
+    const semesterKey = semester ? semester.toString() : "1";
     if (!curriculum.subjectsBySemester.has(semesterKey)) {
       curriculum.subjectsBySemester.set(semesterKey, []);
     }
-    
+
     const semesterSubjects = curriculum.subjectsBySemester.get(semesterKey);
     semesterSubjects.push(newSubject._id);
     curriculum.subjectsBySemester.set(semesterKey, semesterSubjects);
@@ -156,7 +157,8 @@ const addSubject = async (req, res) => {
  */
 const assignSubject = async (req, res) => {
   const assignedBy = req.user.id;
-  const { subjectId, facultyId, section, department, year, semester, batch } = req.body;
+  const { subjectId, facultyId, section, department, year, semester, batch } =
+    req.body;
 
   try {
     const subject = await Subject.findById(subjectId);
@@ -181,7 +183,7 @@ const assignSubject = async (req, res) => {
       year,
       semester,
       batch,
-      section
+      section,
     });
 
     if (!classDoc) {
@@ -199,7 +201,8 @@ const assignSubject = async (req, res) => {
 
     if (existingAssignment) {
       return res.status(400).json({
-        message: "This subject is already assigned to a faculty for this class and section",
+        message:
+          "This subject is already assigned to a faculty for this class and section",
         success: false,
       });
     }
@@ -268,8 +271,8 @@ const getCurriculum = async (req, res) => {
 
   try {
     const curriculum = await Curriculum.findOne({ department }).populate({
-      path: 'subjectsBySemester',
-      model: 'Subject'
+      path: "subjectsBySemester",
+      model: "Subject",
     });
 
     if (!curriculum) {
@@ -293,10 +296,52 @@ const getCurriculum = async (req, res) => {
   }
 };
 
+const getSubjectsForDepartment = async (req, res) => {
+  try {
+    const hod = await User.findById(req.user.id).select("department").lean();
+    if (!hod) {
+      return res.status(404).json({
+        message: "account not found",
+        success: false,
+      });
+    }
+    const { year } = req.query;
+    if (!year) {
+      return res
+        .status(400)
+        .json({ message: "Missing required query parameters." });
+    }
+
+    const department = hod.department;
+
+    const subjects = await Subject.find({ year, department });
+    return res.status(200).json({ subjects });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch subjects.", error: error.message });
+  }
+};
+
+const getSubjectAssignmentsByHOD = async (req, res) => {
+  try {
+    const hodId = req.user.id;
+    const assignments = await AssignedSubject.find({ hod: hodId });
+    return res.status(200).json({ assignments });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to fetch subject assignments.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getSubjectsbyCriteria,
   addSubject,
   assignSubject,
   deleteSubjectAssignment,
   getCurriculum,
+  getSubjectsForDepartment,
+  getSubjectAssignmentsByHOD,
 };

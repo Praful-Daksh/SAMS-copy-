@@ -7,6 +7,8 @@ const {
   assignSubject,
   deleteSubjectAssignment,
   getCurriculum,
+  getSubjectsForDepartment,
+  getSubjectAssignmentsByHOD,
 } = require("../Controllers/SubjectController");
 const {
   getSubjectsValidation,
@@ -19,9 +21,29 @@ SubjectRouter.get("/", (req, res) => {
   res.send("It is the Subject Router!");
 });
 
-SubjectRouter.get("/by-criteria", ensureAuthenticated([]), getSubjectsbyCriteria);
+SubjectRouter.get(
+  "/by-criteria",
+  ensureAuthenticated([]),
+  getSubjectsbyCriteria
+);
 
-SubjectRouter.get("/curriculum", ensureAuthenticated(["HOD", "ADMIN", "FACULTY"]), getCurriculum);
+SubjectRouter.get(
+  "/subjects",
+  ensureAuthenticated(["HOD", "ADMIN"]),
+  getSubjectsForDepartment
+);
+
+SubjectRouter.get(
+  "/assignments",
+  ensureAuthenticated(["HOD", "ADMIN"]),
+  getSubjectAssignmentsByHOD
+);
+
+SubjectRouter.get(
+  "/curriculum",
+  ensureAuthenticated(["HOD", "ADMIN", "FACULTY"]),
+  getCurriculum
+);
 
 SubjectRouter.post(
   "/add",

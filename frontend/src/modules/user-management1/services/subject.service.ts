@@ -48,6 +48,7 @@ class SubjectService {
     }
   }
 
+
   async addSubject(data: {
     name: string;
     code: string;
