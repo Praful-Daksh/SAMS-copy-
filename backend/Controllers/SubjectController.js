@@ -107,7 +107,6 @@ const addSubject = async (req, res) => {
       });
     }
 
-    // Create new subject
     const newSubject = new Subject({
       name,
       code,
@@ -126,7 +125,6 @@ const addSubject = async (req, res) => {
       });
     }
 
-    // Add subject to the appropriate semester in curriculum
     const semesterKey = semester ? semester.toString() : "1";
     if (!curriculum.subjectsBySemester.has(semesterKey)) {
       curriculum.subjectsBySemester.set(semesterKey, []);

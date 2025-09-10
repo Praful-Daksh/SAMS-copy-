@@ -1136,11 +1136,12 @@ const HODDashboard = ({ isHOD = true }) => {
   const handleNewSubject = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await apiClient.post("/subjects/add", {
+      const response = await apiClient.post("/subjectData/add", {
         code: newSubjectCode,
         semester: Number(newSubjectSemester),
         name: newSubjectName,
         department: department,
+        year: newSubjectYear
       })
 
     } catch (err) {

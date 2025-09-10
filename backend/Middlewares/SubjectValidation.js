@@ -1,7 +1,7 @@
 const joi = require("joi");
 
 /**
- * validate subject details 
+ * validate subject details
  * subject name , subject code
  * department , year , semester
  */
@@ -9,9 +9,9 @@ const addSubjectValidation = (req, res, next) => {
   const schema = joi.object({
     name: joi.string().required(),
     code: joi.string().required(),
-    department: joi.string().required(),
     year: joi.number().required(),
     semester: joi.number().required(),
+    department: joi.string().required(),
   });
   const { error } = schema.validate(req.body);
 
