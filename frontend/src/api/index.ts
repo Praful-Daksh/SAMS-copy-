@@ -42,10 +42,10 @@ apiClient.interceptors.response.use(
       error.response.status >= 400 &&
       error.response.status !== 429
     ) {
-      const errorMessage =
-        error.response.data?.message ||
-        error.response.data?.error ||
-        "Request failed. Please check your input and try again.";
+      let errorMessage = error.response?.data?.message || error.response?.data?.error;
+      if (!errorMessage || typeof errorMessage !== "string" || errorMessage.trim() === "") {
+        errorMessage = "Request failed. Please check your input and try again.";
+      }
       toast({
         title: "Request Failed",
         description: errorMessage,
@@ -71,9 +71,13 @@ apiClient.interceptors.response.use(
     }
     // Handle other unexpected errors
     else {
+      let errorMessage = error.message || "An unexpected error occurred. Please try again.";
+      if (!errorMessage || typeof errorMessage !== "string" || errorMessage.trim() === "") {
+        errorMessage = "An unexpected error occurred. Please try again.";
+      }
       toast({
         title: "Unexpected Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }

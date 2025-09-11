@@ -4,6 +4,7 @@ const AssignedSubject = require("../Models/AssignedSubjects.js");
 const departmentAssignment = require("../Models/AssignedDepartments.js");
 const Curriculum = require("../Models/Curriculum.js");
 const Class = require("../Models/Class.js");
+const DepartmentAssignment = require("../Models/AssignedDepartments.js");
 
 /**
  * Get all subjects by department, year, semester
@@ -294,10 +295,12 @@ const getCurriculum = async (req, res) => {
   }
 };
 
-const getSubjectsForDepartment = async (req, res) => {
+const getSubjects = async (req, res) => {
   try {
-    const hod = await User.findById(req.user.id).select("department").lean();
-    if (!hod) {
+    const hodAssignment = await DepartmentAssignment.findOne({
+      hod: req.user.id,
+    }).lean();
+    if (!hodAssignment) {
       return res.status(404).json({
         message: "account not found",
         success: false,
@@ -310,9 +313,76 @@ const getSubjectsForDepartment = async (req, res) => {
         .json({ message: "Missing required query parameters." });
     }
 
-    const department = hod.department;
+    const department = hodAssignment.department;
+    const semesterToGet = [`${2 * year - 1}`, `${2 * year}`];
 
-    const subjects = await Subject.find({ year, department });
+    const subjects = await Curriculum.aggregate([
+      {
+        $match: {
+          department: department,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          allSubjectIds: {
+            $reduce: {
+              input: semesterToGet,
+              initialValue: [],
+              in: {
+                $concatArrays: [
+                  "$$value",
+                  {
+                    $map: {
+                      input: {
+                        $ifNull: [
+                          {
+                            $getField: {
+                              field: "$$this",
+                              input: "$subjectsBySemester",
+                            },
+                          },
+                          [],
+                        ],
+                      },
+                      as: "subjectId",
+                      in: {
+                        subjectId: "$$subjectId",
+                        semester: "$$this",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $unwind: "$allSubjectIds",
+      },
+      {
+        $lookup: {
+          from: "subjects",
+          localField: "allSubjectIds.subjectId",
+          foreignField: "_id",
+          as: "subject",
+        },
+      },
+      {
+        $unwind: "$subject",
+      },
+      {
+        $addFields: {
+          "subject.semester": "$allSubjectIds.semester",
+        },
+      },
+      {
+        $replaceRoot: {
+          newRoot: "$subject",
+        },
+      },
+    ]);
     return res.status(200).json({ subjects });
   } catch (error) {
     return res
@@ -340,6 +410,6 @@ module.exports = {
   assignSubject,
   deleteSubjectAssignment,
   getCurriculum,
-  getSubjectsForDepartment,
+  getSubjects,
   getSubjectAssignmentsByHOD,
 };

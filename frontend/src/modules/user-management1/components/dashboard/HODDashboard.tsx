@@ -1113,7 +1113,6 @@ const HODDashboard = ({ isHOD = true }) => {
   const [showAddSubjectForm, setShowAddSubjectForm] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newSubjectCode, setNewSubjectCode] = useState("");
-  const [newSubjectYear, setNewSubjectYear] = useState("");
   const [newSubjectSemester, setNewSubjectSemester] = useState("");
 
   const [subjectsInfo, setSubjectsInfo] = useState([]);
@@ -1140,8 +1139,7 @@ const HODDashboard = ({ isHOD = true }) => {
         code: newSubjectCode,
         semester: Number(newSubjectSemester),
         name: newSubjectName,
-        department: department,
-        year: newSubjectYear
+        department: department
       })
 
     } catch (err) {
@@ -2152,24 +2150,6 @@ const HODDashboard = ({ isHOD = true }) => {
                           onChange={(e) => setNewSubjectName(e.target.value)}
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Year
-                        </label>
-                        <select
-                          value={newSubjectYear}
-                          onChange={(e) => setNewSubjectYear(e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
-                          required
-                        >
-                          <option value="">Select Year</option>
-                          {yearsList.map((year) => (
-                            <option key={year} value={year}>
-                              {year}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
@@ -2200,7 +2180,6 @@ const HODDashboard = ({ isHOD = true }) => {
                           disabled={
                             !newSubjectCode ||
                             !newSubjectName ||
-                            !newSubjectYear ||
                             !newSubjectSemester
                           }
                         >

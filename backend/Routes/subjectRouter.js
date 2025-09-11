@@ -7,7 +7,7 @@ const {
   assignSubject,
   deleteSubjectAssignment,
   getCurriculum,
-  getSubjectsForDepartment,
+  getSubjects,
   getSubjectAssignmentsByHOD,
 } = require("../Controllers/SubjectController");
 const {
@@ -30,7 +30,7 @@ SubjectRouter.get(
 SubjectRouter.get(
   "/subjects",
   ensureAuthenticated(["HOD", "ADMIN"]),
-  getSubjectsForDepartment
+  getSubjects
 );
 
 SubjectRouter.get(
